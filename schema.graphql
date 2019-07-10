@@ -1,0 +1,84 @@
+type Thread {
+    name: String!
+    originId: String!
+    messages: [Message!]!
+    threadGroupId: ID!
+    serviceInstanceId: ID!
+    id: ID!
+}
+
+type Service {
+    displayName: String!
+    description: String!
+    name: String!
+}
+
+enum InstanceStatus {
+  RUNNING
+  INITIALIZED
+  SHUTTING_DOWN
+  STOPPED
+}
+
+type ServiceInstance {
+    id: ID!
+    name: String!
+}
+
+type ThreadGroup {
+    id: ID!
+    name: String!
+    messages: [Message!]!
+    threads: [Thread!]!
+}
+
+type Message {
+    id: ID!
+    originId: String!
+    messageAuthorId: ID!
+    threadId: ID!
+    body: String!
+    threadGroupId: ID!
+}
+
+type MessageAuthor {
+    id: ID!
+    originId: String!
+    username: String!
+}
+
+input NewMessage {
+    id: ID!
+    body: String!
+    authorName: String!
+    authorOriginId: String!
+    originId: String!
+}
+
+input NewThread {
+    serviceId: String!
+    originId: String!
+    groupId: ID!
+    name: String!
+}
+
+type Query {
+  messages: [Message!]!
+  instances: [ServiceInstance!]!
+  services: [Service!]!
+  threadGroups: [ThreadGroup!]!
+}
+
+type Mutation {
+    sendMessage(input: NewMessage!): Message!
+    createThreadGroup(name: String!): ThreadGroup!
+    deleteThreadGroup(id: String!): String!
+    addThreadToGroup(input: NewThread): ThreadGroup!
+    setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!
+    createNewInstance(serviceModuleName: String!, instanceName: String!): ServiceInstance!
+}
+
+type Subscription {
+    messageReceived(threadId: String!): Message!
+}
+

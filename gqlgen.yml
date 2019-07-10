@@ -1,0 +1,17 @@
+# .gqlgen.yml example
+#
+# Refer to https://gqlgen.com/config/
+# for detailed .gqlgen.yml documentation.
+
+schema:
+- schema.graphql
+exec:
+  filename: core/generated.go
+model:
+  filename: core/models_gen.go
+resolver:
+  filename: core/resolver.go
+  type: Resolver
+
+autobind:
+ - github.com/feelfreelinux/ChatPlug/core
