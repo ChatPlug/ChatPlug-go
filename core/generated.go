@@ -82,8 +82,9 @@ type ComplexityRoot struct {
 	}
 
 	ServiceInstance struct {
-		ID   func(childComplexity int) int
-		Name func(childComplexity int) int
+		ID     func(childComplexity int) int
+		Name   func(childComplexity int) int
+		Status func(childComplexity int) int
 	}
 
 	Subscription struct {
@@ -338,6 +339,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ServiceInstance.Name(childComplexity), true
 
+	case "ServiceInstance.status":
+		if e.complexity.ServiceInstance.Status == nil {
+			break
+		}
+
+		return e.complexity.ServiceInstance.Status(childComplexity), true
+
 	case "Subscription.messageReceived":
 		if e.complexity.Subscription.MessageReceived == nil {
 			break
@@ -536,6 +544,7 @@ enum InstanceStatus {
 type ServiceInstance {
     id: ID!
     name: String!
+    status: InstanceStatus!
 }
 
 type ThreadGroup {
@@ -1769,6 +1778,43 @@ func (ec *executionContext) _ServiceInstance_name(ctx context.Context, field gra
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ServiceInstance_status(ctx context.Context, field graphql.CollectedField, obj *ServiceInstance) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ServiceInstance",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Status, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(InstanceStatus)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNInstanceStatus2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐInstanceStatus(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Subscription_messageReceived(ctx context.Context, field graphql.CollectedField) func() graphql.Marshaler {
@@ -3701,6 +3747,11 @@ func (ec *executionContext) _ServiceInstance(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "status":
+			out.Values[i] = ec._ServiceInstance_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4097,6 +4148,15 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNInstanceStatus2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐInstanceStatus(ctx context.Context, v interface{}) (InstanceStatus, error) {
+	var res InstanceStatus
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNInstanceStatus2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐInstanceStatus(ctx context.Context, sel ast.SelectionSet, v InstanceStatus) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNMessage2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessage(ctx context.Context, sel ast.SelectionSet, v Message) graphql.Marshaler {

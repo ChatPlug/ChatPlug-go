@@ -2,7 +2,7 @@
     "name": "discord",
     "displayName": "Discord service",
     "description": "A discord service",
-    "entrypoint": "./discord",
+    "entrypoint": "discord",
     "type": "node",
     "version": "0.0.0"
 }

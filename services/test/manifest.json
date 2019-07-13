@@ -2,7 +2,7 @@
     "name": "test",
     "displayName": "Test service",
     "description": "A test service",
-    "entrypoint": "./test",
+    "entrypoint": "test",
     "type": "executable",
     "version": "0.0.0"
 }

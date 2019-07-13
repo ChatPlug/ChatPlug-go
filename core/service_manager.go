@@ -1,10 +1,13 @@
 package core
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 )
 
 type ServiceManager struct {
@@ -31,6 +34,30 @@ func (sm *ServiceManager) LoadAvailableServices() {
 			}
 		}
 	}
+}
+
+func (sm *ServiceManager) FindServiceWithName(moduleName string) *Service {
+	for _, n := range sm.services {
+		if n.Name == moduleName {
+			return n
+		}
+	}
+	return nil
+}
+
+func (sm *ServiceManager) StartupServiceInstance(instance *ServiceInstance) {
+	service := sm.FindServiceWithName(instance.ModuleName)
+
+	cmd := exec.Command("services/"+service.Name+"/"+service.EntryPoint, "--id="+instance.ID)
+	var stdBuffer bytes.Buffer
+	mw := io.MultiWriter(os.Stdout, &stdBuffer)
+	cmd.Stderr = mw
+	cmd.Stdout = mw
+	err := cmd.Run() //blocks until sub process is complete
+	if err != nil {
+		panic(err)
+	}
+	log.Println(stdBuffer.String())
 }
 
 func Exists(name string) bool {

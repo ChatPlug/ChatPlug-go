@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 )
 
 type Resolver struct {
@@ -43,10 +44,28 @@ func (r *mutationResolver) AddThreadToGroup(ctx context.Context, input *NewThrea
 	panic("not implemented")
 }
 func (r *mutationResolver) SetInstanceStatus(ctx context.Context, instanceID string, status *InstanceStatus) (*ServiceInstance, error) {
-	panic("not implemented")
+	var instance ServiceInstance
+
+	r.App.db.First(&instance, "id = ?", instanceID)
+	r.App.db.Model(&instance).Update("Status", status.String())
+
+	if status.String() == "RUNNING" {
+		fmt.Printf(status.String())
+		r.App.sm.StartupServiceInstance(&instance)
+	}
+
+	return &instance, nil
 }
+
 func (r *mutationResolver) CreateNewInstance(ctx context.Context, serviceModuleName string, instanceName string) (*ServiceInstance, error) {
-	panic("not implemented")
+	newInstance := &ServiceInstance{
+		Name:       instanceName,
+		ModuleName: serviceModuleName,
+		Threads:    []Thread{},
+	}
+
+	r.App.db.Create(newInstance)
+	return newInstance, nil
 }
 
 type queryResolver struct{ *Resolver }
