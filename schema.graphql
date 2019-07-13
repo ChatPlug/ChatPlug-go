@@ -48,11 +48,19 @@ type MessageAuthor {
     username: String!
 }
 
+type MessagePayload {
+    targetThreadId: ID!
+    message: Message!
+}
+
+input MessageAuthorInput {
+    originId: String!
+    username: String!
+}
+
 input NewMessage {
-    id: ID!
     body: String!
-    authorName: String!
-    authorOriginId: String!
+    author: MessageAuthorInput!
     originId: String!
 }
 
@@ -71,15 +79,16 @@ type Query {
 }
 
 type Mutation {
-    sendMessage(input: NewMessage!): Message!
+    sendMessage(instanceId: ID!, input: NewMessage!): Message!
     createThreadGroup(name: String!): ThreadGroup!
-    deleteThreadGroup(id: String!): String!
+    deleteThreadGroup(id: ID!): ID!
+    deleteThread(id: ID!): ID!
     addThreadToGroup(input: NewThread): ThreadGroup!
     setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!
     createNewInstance(serviceModuleName: String!, instanceName: String!): ServiceInstance!
 }
 
 type Subscription {
-    messageReceived(threadId: String!): Message!
+    messageReceived(instanceId: ID!): MessagePayload!
 }
 

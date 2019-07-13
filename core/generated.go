@@ -59,12 +59,18 @@ type ComplexityRoot struct {
 		Username func(childComplexity int) int
 	}
 
+	MessagePayload struct {
+		Message        func(childComplexity int) int
+		TargetThreadID func(childComplexity int) int
+	}
+
 	Mutation struct {
 		AddThreadToGroup  func(childComplexity int, input *NewThread) int
 		CreateNewInstance func(childComplexity int, serviceModuleName string, instanceName string) int
 		CreateThreadGroup func(childComplexity int, name string) int
+		DeleteThread      func(childComplexity int, id string) int
 		DeleteThreadGroup func(childComplexity int, id string) int
-		SendMessage       func(childComplexity int, input NewMessage) int
+		SendMessage       func(childComplexity int, instanceID string, input NewMessage) int
 		SetInstanceStatus func(childComplexity int, instanceID string, status *InstanceStatus) int
 	}
 
@@ -88,7 +94,7 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		MessageReceived func(childComplexity int, threadID string) int
+		MessageReceived func(childComplexity int, instanceID string) int
 	}
 
 	Thread struct {
@@ -109,9 +115,10 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	SendMessage(ctx context.Context, input NewMessage) (*Message, error)
+	SendMessage(ctx context.Context, instanceID string, input NewMessage) (*Message, error)
 	CreateThreadGroup(ctx context.Context, name string) (*ThreadGroup, error)
 	DeleteThreadGroup(ctx context.Context, id string) (string, error)
+	DeleteThread(ctx context.Context, id string) (string, error)
 	AddThreadToGroup(ctx context.Context, input *NewThread) (*ThreadGroup, error)
 	SetInstanceStatus(ctx context.Context, instanceID string, status *InstanceStatus) (*ServiceInstance, error)
 	CreateNewInstance(ctx context.Context, serviceModuleName string, instanceName string) (*ServiceInstance, error)
@@ -123,7 +130,7 @@ type QueryResolver interface {
 	ThreadGroups(ctx context.Context) ([]*ThreadGroup, error)
 }
 type SubscriptionResolver interface {
-	MessageReceived(ctx context.Context, threadID string) (<-chan *Message, error)
+	MessageReceived(ctx context.Context, instanceID string) (<-chan *MessagePayload, error)
 }
 
 type executableSchema struct {
@@ -204,6 +211,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.MessageAuthor.Username(childComplexity), true
 
+	case "MessagePayload.message":
+		if e.complexity.MessagePayload.Message == nil {
+			break
+		}
+
+		return e.complexity.MessagePayload.Message(childComplexity), true
+
+	case "MessagePayload.targetThreadId":
+		if e.complexity.MessagePayload.TargetThreadID == nil {
+			break
+		}
+
+		return e.complexity.MessagePayload.TargetThreadID(childComplexity), true
+
 	case "Mutation.addThreadToGroup":
 		if e.complexity.Mutation.AddThreadToGroup == nil {
 			break
@@ -240,6 +261,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateThreadGroup(childComplexity, args["name"].(string)), true
 
+	case "Mutation.deleteThread":
+		if e.complexity.Mutation.DeleteThread == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteThread_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteThread(childComplexity, args["id"].(string)), true
+
 	case "Mutation.deleteThreadGroup":
 		if e.complexity.Mutation.DeleteThreadGroup == nil {
 			break
@@ -262,7 +295,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SendMessage(childComplexity, args["input"].(NewMessage)), true
+		return e.complexity.Mutation.SendMessage(childComplexity, args["instanceId"].(string), args["input"].(NewMessage)), true
 
 	case "Mutation.setInstanceStatus":
 		if e.complexity.Mutation.SetInstanceStatus == nil {
@@ -356,7 +389,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Subscription.MessageReceived(childComplexity, args["threadId"].(string)), true
+		return e.complexity.Subscription.MessageReceived(childComplexity, args["instanceId"].(string)), true
 
 	case "Thread.id":
 		if e.complexity.Thread.ID == nil {
@@ -569,11 +602,19 @@ type MessageAuthor {
     username: String!
 }
 
+type MessagePayload {
+    targetThreadId: ID!
+    message: Message!
+}
+
+input MessageAuthorInput {
+    originId: String!
+    username: String!
+}
+
 input NewMessage {
-    id: ID!
     body: String!
-    authorName: String!
-    authorOriginId: String!
+    author: MessageAuthorInput!
     originId: String!
 }
 
@@ -592,16 +633,17 @@ type Query {
 }
 
 type Mutation {
-    sendMessage(input: NewMessage!): Message!
+    sendMessage(instanceId: ID!, input: NewMessage!): Message!
     createThreadGroup(name: String!): ThreadGroup!
-    deleteThreadGroup(id: String!): String!
+    deleteThreadGroup(id: ID!): ID!
+    deleteThread(id: ID!): ID!
     addThreadToGroup(input: NewThread): ThreadGroup!
     setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!
     createNewInstance(serviceModuleName: String!, instanceName: String!): ServiceInstance!
 }
 
 type Subscription {
-    messageReceived(threadId: String!): Message!
+    messageReceived(instanceId: ID!): MessagePayload!
 }
 
 `},
@@ -666,7 +708,21 @@ func (ec *executionContext) field_Mutation_deleteThreadGroup_args(ctx context.Co
 	args := map[string]interface{}{}
 	var arg0 string
 	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteThread_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -678,14 +734,22 @@ func (ec *executionContext) field_Mutation_deleteThreadGroup_args(ctx context.Co
 func (ec *executionContext) field_Mutation_sendMessage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 NewMessage
-	if tmp, ok := rawArgs["input"]; ok {
-		arg0, err = ec.unmarshalNNewMessage2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐNewMessage(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["instanceId"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["instanceId"] = arg0
+	var arg1 NewMessage
+	if tmp, ok := rawArgs["input"]; ok {
+		arg1, err = ec.unmarshalNNewMessage2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐNewMessage(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -729,13 +793,13 @@ func (ec *executionContext) field_Subscription_messageReceived_args(ctx context.
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["threadId"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	if tmp, ok := rawArgs["instanceId"]; ok {
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["threadId"] = arg0
+	args["instanceId"] = arg0
 	return args, nil
 }
 
@@ -1108,6 +1172,80 @@ func (ec *executionContext) _MessageAuthor_username(ctx context.Context, field g
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _MessagePayload_targetThreadId(ctx context.Context, field graphql.CollectedField, obj *MessagePayload) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "MessagePayload",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TargetThreadID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _MessagePayload_message(ctx context.Context, field graphql.CollectedField, obj *MessagePayload) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "MessagePayload",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Message, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Message)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNMessage2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessage(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_sendMessage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -1134,7 +1272,7 @@ func (ec *executionContext) _Mutation_sendMessage(ctx context.Context, field gra
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SendMessage(rctx, args["input"].(NewMessage))
+		return ec.resolvers.Mutation().SendMessage(rctx, args["instanceId"].(string), args["input"].(NewMessage))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1237,7 +1375,51 @@ func (ec *executionContext) _Mutation_deleteThreadGroup(ctx context.Context, fie
 	res := resTmp.(string)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteThread_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteThread(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_addThreadToGroup(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1831,7 +2013,7 @@ func (ec *executionContext) _Subscription_messageReceived(ctx context.Context, f
 	// FIXME: subscriptions are missing request middleware stack https://github.com/99designs/gqlgen/issues/259
 	//          and Tracer stack
 	rctx := ctx
-	results, err := ec.resolvers.Subscription().MessageReceived(rctx, args["threadId"].(string))
+	results, err := ec.resolvers.Subscription().MessageReceived(rctx, args["instanceId"].(string))
 	if err != nil {
 		ec.Error(ctx, err)
 		return nil
@@ -1845,7 +2027,7 @@ func (ec *executionContext) _Subscription_messageReceived(ctx context.Context, f
 			w.Write([]byte{'{'})
 			graphql.MarshalString(field.Alias).MarshalGQL(w)
 			w.Write([]byte{':'})
-			ec.marshalNMessage2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessage(ctx, field.Selections, res).MarshalGQL(w)
+			ec.marshalNMessagePayload2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessagePayload(ctx, field.Selections, res).MarshalGQL(w)
 			w.Write([]byte{'}'})
 		})
 	}
@@ -3372,33 +3554,45 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputMessageAuthorInput(ctx context.Context, obj interface{}) (MessageAuthorInput, error) {
+	var it MessageAuthorInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "originId":
+			var err error
+			it.OriginID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "username":
+			var err error
+			it.Username, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputNewMessage(ctx context.Context, obj interface{}) (NewMessage, error) {
 	var it NewMessage
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
 		switch k {
-		case "id":
-			var err error
-			it.ID, err = ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
 		case "body":
 			var err error
 			it.Body, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "authorName":
+		case "author":
 			var err error
-			it.AuthorName, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "authorOriginId":
-			var err error
-			it.AuthorOriginID, err = ec.unmarshalNString2string(ctx, v)
+			it.Author, err = ec.unmarshalNMessageAuthorInput2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthorInput(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3547,6 +3741,38 @@ func (ec *executionContext) _MessageAuthor(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var messagePayloadImplementors = []string{"MessagePayload"}
+
+func (ec *executionContext) _MessagePayload(ctx context.Context, sel ast.SelectionSet, obj *MessagePayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, messagePayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MessagePayload")
+		case "targetThreadId":
+			out.Values[i] = ec._MessagePayload_targetThreadId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "message":
+			out.Values[i] = ec._MessagePayload_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -3574,6 +3800,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "deleteThreadGroup":
 			out.Values[i] = ec._Mutation_deleteThreadGroup(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteThread":
+			out.Values[i] = ec._Mutation_deleteThread(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4245,6 +4476,32 @@ func (ec *executionContext) marshalNMessage2ᚖgithubᚗcomᚋfeelfreelinuxᚋCh
 		return graphql.Null
 	}
 	return ec._Message(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNMessageAuthorInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthorInput(ctx context.Context, v interface{}) (MessageAuthorInput, error) {
+	return ec.unmarshalInputMessageAuthorInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalNMessageAuthorInput2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthorInput(ctx context.Context, v interface{}) (*MessageAuthorInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalNMessageAuthorInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthorInput(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalNMessagePayload2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessagePayload(ctx context.Context, sel ast.SelectionSet, v MessagePayload) graphql.Marshaler {
+	return ec._MessagePayload(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMessagePayload2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessagePayload(ctx context.Context, sel ast.SelectionSet, v *MessagePayload) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._MessagePayload(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNNewMessage2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐNewMessage(ctx context.Context, v interface{}) (NewMessage, error) {

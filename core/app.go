@@ -10,11 +10,13 @@ type App struct {
 	router *gin.Engine
 	db     *gorm.DB
 	sm     *ServiceManager
+	sim    *ServiceInstancesManager
 }
 
 func NewApp() *App {
 	app := &App{
-		sm: &ServiceManager{},
+		sm:  &ServiceManager{},
+		sim: &ServiceInstancesManager{},
 	}
 	return app
 }

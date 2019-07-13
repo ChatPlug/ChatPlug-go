@@ -8,12 +8,20 @@ import (
 	"strconv"
 )
 
+type MessageAuthorInput struct {
+	OriginID string `json:"originId"`
+	Username string `json:"username"`
+}
+
+type MessagePayload struct {
+	TargetThreadID string   `json:"targetThreadId"`
+	Message        *Message `json:"message"`
+}
+
 type NewMessage struct {
-	ID             string `json:"id"`
-	Body           string `json:"body"`
-	AuthorName     string `json:"authorName"`
-	AuthorOriginID string `json:"authorOriginId"`
-	OriginID       string `json:"originId"`
+	Body     string              `json:"body"`
+	Author   *MessageAuthorInput `json:"author"`
+	OriginID string              `json:"originId"`
 }
 
 type NewThread struct {
