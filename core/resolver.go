@@ -74,7 +74,9 @@ func (r *queryResolver) Messages(ctx context.Context) ([]*Message, error) {
 	panic("not implemented")
 }
 func (r *queryResolver) Instances(ctx context.Context) ([]*ServiceInstance, error) {
-	panic("not implemented")
+	instances := []*ServiceInstance{}
+	r.App.db.Find(&instances)
+	return instances, nil
 }
 
 func (r *queryResolver) ThreadGroups(ctx context.Context) ([]*ThreadGroup, error) {
