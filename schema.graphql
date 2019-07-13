@@ -23,6 +23,7 @@ enum InstanceStatus {
 type ServiceInstance {
     id: ID!
     name: String!
+    status: InstanceStatus!
 }
 
 type ThreadGroup {

@@ -67,9 +67,10 @@ type Service struct {
 
 type ServiceInstance struct {
 	Base
-	Name       string   `json:"name"`
-	ModuleName string   `json:"moduleName"`
-	Threads    []Thread `json:"threads"`
+	Name       string         `json:"name"`
+	ModuleName string         `json:"moduleName"`
+	Threads    []Thread       `json:"threads"`
+	Status     InstanceStatus `json:"status"`
 }
 
 type MessageAuthor struct {
