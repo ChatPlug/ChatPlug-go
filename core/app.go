@@ -10,14 +10,14 @@ type App struct {
 	router *gin.Engine
 	db     *gorm.DB
 	sm     *ServiceManager
-	sim    *ServiceInstancesManager
+	sl     *ServiceLoader
 }
 
 func NewApp() *App {
 	app := &App{
-		sm:  &ServiceManager{},
-		sim: &ServiceInstancesManager{},
+		sm: &ServiceManager{},
 	}
+	app.sl = &ServiceLoader{App: app}
 	return app
 }
 
@@ -25,6 +25,8 @@ func (app *App) Init() {
 	var err error
 
 	app.sm.LoadAvailableServices()
+	app.sl.Initialize()
+
 	app.db, err = gorm.Open("sqlite3", "cp.db")
 	if err != nil {
 		panic("failed to connect to database")
@@ -35,4 +37,6 @@ func (app *App) Init() {
 	app.db.AutoMigrate(&Message{})
 	app.db.AutoMigrate(&MessageAuthor{})
 	app.db.AutoMigrate(&ServiceInstance{})
+
+	app.sl.StartupAllInstances()
 }

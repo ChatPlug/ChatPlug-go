@@ -48,7 +48,7 @@ func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, i
 
 			for _, thread := range group.Threads {
 				if thread.ServiceInstanceID != instanceID {
-					r.App.sim.FindEventBoardcasterByInstanceID(thread.ServiceInstanceID).Broadcast(&MessagePayload{
+					r.App.sm.FindEventBoardcasterByInstanceID(thread.ServiceInstanceID).Broadcast(&MessagePayload{
 						TargetThreadID: thread.ID,
 						Message:        msg,
 					})
@@ -102,8 +102,7 @@ func (r *mutationResolver) SetInstanceStatus(ctx context.Context, instanceID str
 	r.App.db.Model(&instance).Update("Status", status.String())
 
 	if status.String() == "RUNNING" {
-		r.App.sm.StartupServiceInstance(&instance)
-		r.App.sim.LoadInstance(instance.ID)
+		r.App.sl.StartupInstance(instanceID)
 	}
 
 	return &instance, nil
@@ -147,7 +146,7 @@ func (r *queryResolver) Services(ctx context.Context) ([]*Service, error) {
 type subscriptionResolver struct{ *Resolver }
 
 func (r *subscriptionResolver) MessageReceived(ctx context.Context, instanceID string) (<-chan *MessagePayload, error) {
-	eventBroadcaster := r.App.sim.FindEventBoardcasterByInstanceID(instanceID)
+	eventBroadcaster := r.App.sm.FindEventBoardcasterByInstanceID(instanceID)
 	messages := make(chan *MessagePayload, 1)
 	go func() {
 		msgChan, cancel := eventBroadcaster.Subscribe()

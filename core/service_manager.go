@@ -5,11 +5,16 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 )
 
+type LoadedInstance struct {
+	instanceID       string
+	eventBroadcaster *EventBroadcaster
+}
+
 type ServiceManager struct {
-	services []*Service
+	services  []*Service
+	instances []*LoadedInstance
 }
 
 func (sm *ServiceManager) LoadAvailableServices() {
@@ -43,12 +48,6 @@ func (sm *ServiceManager) FindServiceWithName(moduleName string) *Service {
 	return nil
 }
 
-func (sm *ServiceManager) StartupServiceInstance(instance *ServiceInstance) {
-	service := sm.FindServiceWithName(instance.ModuleName)
-
-	exec.Command("services/"+service.Name+"/"+service.EntryPoint, instance.ID)
-}
-
 func Exists(name string) bool {
 	if _, err := os.Stat(name); err != nil {
 		if os.IsNotExist(err) {
@@ -56,4 +55,36 @@ func Exists(name string) bool {
 		}
 	}
 	return true
+}
+
+func (sm *ServiceManager) LoadInstance(instanceID string) *LoadedInstance {
+	if !sm.IsInstanceLoaded(instanceID) {
+		instance := &LoadedInstance{
+			instanceID:       instanceID,
+			eventBroadcaster: NewEventBroadcaster(),
+		}
+
+		sm.instances = append(sm.instances, instance)
+		return instance
+	}
+
+	return nil
+}
+
+func (sm *ServiceManager) FindEventBoardcasterByInstanceID(instanceID string) *EventBroadcaster {
+	for _, n := range sm.instances {
+		if n.instanceID == instanceID {
+			return n.eventBroadcaster
+		}
+	}
+	return nil
+}
+
+func (sm *ServiceManager) IsInstanceLoaded(instanceID string) bool {
+	for _, n := range sm.instances {
+		if n.instanceID == instanceID {
+			return true
+		}
+	}
+	return false
 }
