@@ -19,9 +19,10 @@ type MessagePayload struct {
 }
 
 type NewMessage struct {
-	Body     string              `json:"body"`
-	Author   *MessageAuthorInput `json:"author"`
-	OriginID string              `json:"originId"`
+	Body           string              `json:"body"`
+	Author         *MessageAuthorInput `json:"author"`
+	OriginID       string              `json:"originId"`
+	OriginThreadID string              `json:"originThreadId"`
 }
 
 type NewThread struct {

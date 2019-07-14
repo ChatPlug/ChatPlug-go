@@ -620,6 +620,7 @@ input NewMessage {
     body: String!
     author: MessageAuthorInput!
     originId: String!
+    originThreadId: String!
 }
 
 input NewThread {
@@ -3603,6 +3604,12 @@ func (ec *executionContext) unmarshalInputNewMessage(ctx context.Context, obj in
 		case "originId":
 			var err error
 			it.OriginID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "originThreadId":
+			var err error
+			it.OriginThreadID, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}

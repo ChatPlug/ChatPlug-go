@@ -62,6 +62,7 @@ input NewMessage {
     body: String!
     author: MessageAuthorInput!
     originId: String!
+    originThreadId: String!
 }
 
 input NewThread {

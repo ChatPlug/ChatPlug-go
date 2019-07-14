@@ -23,13 +23,14 @@ type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, input NewMessage) (*Message, error) {
 	var groups []ThreadGroup
+	var lastSentMsg *Message
 	r.App.db.Preload("Threads").Find(&groups)
 
 	for _, group := range groups {
 		rightGroup := false
 		var rightThreadID string
 		for _, thread := range group.Threads {
-			if thread.ServiceInstanceID == instanceID {
+			if thread.ServiceInstanceID == instanceID && thread.OriginID == input.OriginThreadID {
 				rightGroup = true
 				rightThreadID = thread.ID
 			}
@@ -56,10 +57,10 @@ func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, i
 					})
 				}
 			}
-			return msg, nil
+			lastSentMsg = msg
 		}
 	}
-	return nil, nil
+	return lastSentMsg, nil
 }
 
 func (r *mutationResolver) CreateThreadGroup(ctx context.Context, name string) (*ThreadGroup, error) {

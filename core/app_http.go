@@ -11,7 +11,7 @@ import (
 
 func (app *App) RunHTTPServer() {
 	// Setting up Gin
-	app.router = gin.Default()
+	app.router = gin.New()
 	app.router.RedirectTrailingSlash = false
 	app.router.Use(cors.Default())
 	app.router.Any("/query", app.graphqlQueryHandler())
