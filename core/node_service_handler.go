@@ -14,7 +14,7 @@ func (nsh *NodeServiceHandler) VerifyDepedencies() bool {
 
 func (nsh *NodeServiceHandler) LoadService(instanceID string) {
 	var instance ServiceInstance
-	nsh.App.db.First(&instance, instanceID)
+	nsh.App.db.Where("id = ?", instanceID).First(&instance)
 
 	service := nsh.App.sm.FindServiceWithName(instance.ModuleName)
 
