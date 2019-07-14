@@ -37,6 +37,7 @@ type Message struct {
 	ThreadID        string `json:"threadId"`
 	Body            string `json:"body"`
 	ThreadGroupID   string `json:"threadGroupId"`
+	Author          string `gorm:"-" json:"author"`
 }
 
 type ThreadGroup struct {

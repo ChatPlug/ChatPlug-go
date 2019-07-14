@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"log"
 )
 
 type Resolver struct {
@@ -35,6 +36,7 @@ func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, i
 		}
 
 		if rightGroup {
+			log.Println(group.Name)
 			var messageAuthor MessageAuthor
 			r.App.db.Where("origin_id = ?", input.OriginID).FirstOrCreate(&messageAuthor, MessageAuthor{Username: input.Author.Username, OriginID: input.Author.OriginID})
 			msg := &Message{
@@ -164,4 +166,17 @@ func (r *subscriptionResolver) MessageReceived(ctx context.Context, instanceID s
 		}
 	}()
 	return messages, nil
+}
+
+func (r *Resolver) Message() MessageResolver {
+	return &messageResolver{r}
+}
+
+type messageResolver struct{ *Resolver }
+
+func (r *messageResolver) Author(ctx context.Context, obj *Message) (*MessageAuthor, error) {
+	var author MessageAuthor
+
+	r.App.db.First(&author, "id = ?", obj.MessageAuthorID)
+	return &author, nil
 }

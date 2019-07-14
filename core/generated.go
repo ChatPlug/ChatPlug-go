@@ -35,6 +35,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Message() MessageResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
@@ -45,12 +46,12 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Message struct {
-		Body            func(childComplexity int) int
-		ID              func(childComplexity int) int
-		MessageAuthorID func(childComplexity int) int
-		OriginID        func(childComplexity int) int
-		ThreadGroupID   func(childComplexity int) int
-		ThreadID        func(childComplexity int) int
+		Author        func(childComplexity int) int
+		Body          func(childComplexity int) int
+		ID            func(childComplexity int) int
+		OriginID      func(childComplexity int) int
+		ThreadGroupID func(childComplexity int) int
+		ThreadID      func(childComplexity int) int
 	}
 
 	MessageAuthor struct {
@@ -114,6 +115,9 @@ type ComplexityRoot struct {
 	}
 }
 
+type MessageResolver interface {
+	Author(ctx context.Context, obj *Message) (*MessageAuthor, error)
+}
 type MutationResolver interface {
 	SendMessage(ctx context.Context, instanceID string, input NewMessage) (*Message, error)
 	CreateThreadGroup(ctx context.Context, name string) (*ThreadGroup, error)
@@ -148,6 +152,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
+	case "Message.author":
+		if e.complexity.Message.Author == nil {
+			break
+		}
+
+		return e.complexity.Message.Author(childComplexity), true
+
 	case "Message.body":
 		if e.complexity.Message.Body == nil {
 			break
@@ -161,13 +172,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Message.ID(childComplexity), true
-
-	case "Message.messageAuthorId":
-		if e.complexity.Message.MessageAuthorID == nil {
-			break
-		}
-
-		return e.complexity.Message.MessageAuthorID(childComplexity), true
 
 	case "Message.originId":
 		if e.complexity.Message.OriginID == nil {
@@ -590,7 +594,7 @@ type ThreadGroup {
 type Message {
     id: ID!
     originId: String!
-    messageAuthorId: ID!
+    author: MessageAuthor!
     threadId: ID!
     body: String!
     threadGroupId: ID!
@@ -913,7 +917,7 @@ func (ec *executionContext) _Message_originId(ctx context.Context, field graphql
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Message_messageAuthorId(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
+func (ec *executionContext) _Message_author(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -926,13 +930,13 @@ func (ec *executionContext) _Message_messageAuthorId(ctx context.Context, field 
 		Object:   "Message",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.MessageAuthorID, nil
+		return ec.resolvers.Message().Author(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -944,10 +948,10 @@ func (ec *executionContext) _Message_messageAuthorId(ctx context.Context, field 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*MessageAuthor)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNMessageAuthor2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Message_threadId(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
@@ -3666,32 +3670,41 @@ func (ec *executionContext) _Message(ctx context.Context, sel ast.SelectionSet, 
 		case "id":
 			out.Values[i] = ec._Message_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "originId":
 			out.Values[i] = ec._Message_originId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
-		case "messageAuthorId":
-			out.Values[i] = ec._Message_messageAuthorId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+		case "author":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Message_author(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "threadId":
 			out.Values[i] = ec._Message_threadId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "body":
 			out.Values[i] = ec._Message_body(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "threadGroupId":
 			out.Values[i] = ec._Message_threadGroupId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -4476,6 +4489,20 @@ func (ec *executionContext) marshalNMessage2ᚖgithubᚗcomᚋfeelfreelinuxᚋCh
 		return graphql.Null
 	}
 	return ec._Message(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNMessageAuthor2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthor(ctx context.Context, sel ast.SelectionSet, v MessageAuthor) graphql.Marshaler {
+	return ec._MessageAuthor(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMessageAuthor2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthor(ctx context.Context, sel ast.SelectionSet, v *MessageAuthor) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._MessageAuthor(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNMessageAuthorInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthorInput(ctx context.Context, v interface{}) (MessageAuthorInput, error) {

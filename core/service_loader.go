@@ -34,7 +34,7 @@ func (sl *ServiceLoader) StartupAllInstances() {
 
 func (sl *ServiceLoader) StartupInstance(instanceID string) {
 	var instance ServiceInstance
-	sl.App.db.First(&instance, instanceID)
+	sl.App.db.Where("id = ?", instanceID).First(&instance)
 
 	service := sl.App.sm.FindServiceWithName(instance.ModuleName)
 

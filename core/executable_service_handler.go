@@ -1,6 +1,7 @@
 package core
 
 import (
+	"log"
 	"os/exec"
 )
 
@@ -20,8 +21,10 @@ func (esh *ExecutableServiceHandler) LoadService(instanceID string) {
 
 	service := esh.App.sm.FindServiceWithName(instance.ModuleName)
 
+	log.Println("asd")
 	// Startup service
 	esh.ServiceProcesses[instanceID] = exec.Command("services/"+service.Name+"/"+service.EntryPoint, instance.ID)
+	esh.ServiceProcesses[instanceID].Run()
 }
 
 func (esh *ExecutableServiceHandler) ShutdownService(instanceID string) {
