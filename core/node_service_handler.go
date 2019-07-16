@@ -6,13 +6,14 @@ import (
 )
 
 type NodeServiceHandler struct {
-	App              *App
-	ServiceProcesses map[string]*exec.Cmd
+	*BaseServiceHandler
 }
 
 func (nsh *NodeServiceHandler) VerifyDepedencies() bool {
 	nsh.ServiceProcesses = make(map[string]*exec.Cmd)
-	return true
+
+	return commandExists("node")
+	// TODO: add downloading Node.js
 }
 
 func (nsh *NodeServiceHandler) LoadService(instanceID string) {

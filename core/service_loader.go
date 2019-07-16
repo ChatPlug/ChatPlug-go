@@ -1,10 +1,9 @@
 package core
 
-type ServiceHandler interface {
-	VerifyDepedencies() bool
-	LoadService(instanceID string)
-	ShutdownService(instanceID string)
-}
+import (
+	"fmt"
+	"log"
+)
 
 type ServiceLoader struct {
 	App      *App
@@ -13,12 +12,33 @@ type ServiceLoader struct {
 
 func (sl *ServiceLoader) Initialize() {
 	sl.handlers = make(map[string]ServiceHandler)
-	sl.handlers["executable"] = &ExecutableServiceHandler{App: sl.App}
-	sl.handlers["node"] = &NodeServiceHandler{App: sl.App}
+}
 
-	for _, v := range sl.handlers {
-		v.VerifyDepedencies()
+func (sl *ServiceLoader) CreateServiceHandler(service *Service) ServiceHandler {
+	baseHandler := &BaseServiceHandler{App: sl.App, Service: service}
+
+	switch service.Type {
+	case "node":
+		sl.handlers[service.Name] = &NodeServiceHandler{BaseServiceHandler: baseHandler}
+	case "executable":
+		sl.handlers[service.Name] = &ExecutableServiceHandler{BaseServiceHandler: baseHandler}
+	default:
+		log.Printf(fmt.Errorf("Service type %s unknown!", service.Type))
+		// crash?
 	}
+
+	sl.handlers[service.Name].VerifyDepedencies()
+	// TODO: crash when not verified?
+
+	return sl.handlers[service.Name]
+}
+
+func (sl *ServiceLoader) GetHandlerForService(service *Service) ServiceHandler {
+	if handler, ok := sl.handlers[service.Name]; ok {
+		return handler
+	}
+
+	return sl.CreateServiceHandler(service)
 }
 
 func (sl *ServiceLoader) StartupAllInstances() {
@@ -26,8 +46,9 @@ func (sl *ServiceLoader) StartupAllInstances() {
 	sl.App.db.Find(&instances)
 
 	for _, instance := range instances {
-		instanceService := sl.App.sm.FindServiceWithName(instance.ModuleName)
-		sl.handlers[instanceService.Type].LoadService(instance.ID)
+		service := sl.App.sm.FindServiceWithName(instance.ModuleName)
+		sl.GetHandlerForService(service).LoadService(instance.ID)
+
 		sl.App.sm.LoadInstance(instance.ID)
 	}
 }
@@ -37,8 +58,8 @@ func (sl *ServiceLoader) StartupInstance(instanceID string) {
 	sl.App.db.Where("id = ?", instanceID).First(&instance)
 
 	service := sl.App.sm.FindServiceWithName(instance.ModuleName)
+	sl.GetHandlerForService(service).LoadService(instanceID)
 
-	sl.handlers[service.Type].LoadService(instanceID)
 	sl.App.sm.LoadInstance(instance.ID)
 }
 
@@ -47,7 +68,7 @@ func (sl *ServiceLoader) ShutdownAllInstances() {
 	sl.App.db.Find(&instances)
 
 	for _, instance := range instances {
-		instanceService := sl.App.sm.FindServiceWithName(instance.ModuleName)
-		sl.handlers[instanceService.Type].ShutdownService(instance.ID)
+		service := sl.App.sm.FindServiceWithName(instance.ModuleName)
+		sl.GetHandlerForService(service).ShutdownService(instance.ID)
 	}
 }

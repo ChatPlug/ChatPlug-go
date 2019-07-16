@@ -5,8 +5,7 @@ import (
 )
 
 type ExecutableServiceHandler struct {
-	App              *App
-	ServiceProcesses map[string]*exec.Cmd
+	*BaseServiceHandler
 }
 
 func (esh *ExecutableServiceHandler) VerifyDepedencies() bool {
