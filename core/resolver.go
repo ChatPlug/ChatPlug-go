@@ -30,6 +30,7 @@ func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, i
 		rightGroup := false
 		var rightThreadID string
 		for _, thread := range group.Threads {
+
 			if thread.ServiceInstanceID == instanceID && thread.OriginID == input.OriginThreadID {
 				rightGroup = true
 				rightThreadID = thread.ID
@@ -50,12 +51,13 @@ func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, i
 			r.App.db.Model(&group).Association("Messages").Append(msg)
 
 			for _, thread := range group.Threads {
-				if thread.ServiceInstanceID != instanceID {
+				if msg.ThreadID != thread.ID {
 					r.App.sm.FindEventBoardcasterByInstanceID(thread.ServiceInstanceID).Broadcast(&MessagePayload{
-						TargetThreadID: thread.ID,
+						TargetThreadID: thread.OriginID,
 						Message:        msg,
 					})
 				}
+
 			}
 			lastSentMsg = msg
 		}
@@ -150,6 +152,7 @@ type subscriptionResolver struct{ *Resolver }
 
 func (r *subscriptionResolver) MessageReceived(ctx context.Context, instanceID string) (<-chan *MessagePayload, error) {
 	eventBroadcaster := r.App.sm.FindEventBoardcasterByInstanceID(instanceID)
+
 	messages := make(chan *MessagePayload, 1)
 	go func() {
 		msgChan, cancel := eventBroadcaster.Subscribe()
@@ -180,4 +183,11 @@ func (r *messageResolver) Author(ctx context.Context, obj *Message) (*MessageAut
 
 	r.App.db.First(&author, "id = ?", obj.MessageAuthorID)
 	return &author, nil
+}
+
+func (r *messageResolver) Thread(ctx context.Context, obj *Message) (*Thread, error) {
+	var thread Thread
+
+	r.App.db.First(&thread, "id = ?", obj.ThreadID)
+	return &thread, nil
 }

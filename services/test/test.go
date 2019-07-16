@@ -1,30 +1,19 @@
+
 package main
 
 import (
-	"context"
-	"log"
+	"fmt"
 	"os"
-
-	"github.com/machinebox/graphql"
 )
 
 func main() {
 	id := os.Args[1]
-	client := graphql.NewClient("http://localhost:2137/query")
+	client := ChatPlugClient{}
+	client.Connect(id, "http://localhost:2137/query", "ws://localhost:2137/query")
+	msgChan := client.SubscribeToNewMessages()
 
-	// make a request
-	req := graphql.NewRequest(`
-	mutation ($id: ID!) {
-		setInstanceStatus(instanceId:$id, status:INITIALIZED) {
-		  status
-		  name
-		}
-	  }`)
-	ctx := context.Background()
-	var respData map[string]interface{}
-	req.Var("id", id)
-
-	if err := client.Run(ctx, req, &respData); err != nil {
-		log.Fatal(err)
+	for msg := range msgChan {
+		fmt.Printf(msg.Message.Body)
 	}
+	defer client.Close()
 }

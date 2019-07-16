@@ -50,8 +50,8 @@ type ComplexityRoot struct {
 		Body          func(childComplexity int) int
 		ID            func(childComplexity int) int
 		OriginID      func(childComplexity int) int
+		Thread        func(childComplexity int) int
 		ThreadGroupID func(childComplexity int) int
-		ThreadID      func(childComplexity int) int
 	}
 
 	MessageAuthor struct {
@@ -117,6 +117,7 @@ type ComplexityRoot struct {
 
 type MessageResolver interface {
 	Author(ctx context.Context, obj *Message) (*MessageAuthor, error)
+	Thread(ctx context.Context, obj *Message) (*Thread, error)
 }
 type MutationResolver interface {
 	SendMessage(ctx context.Context, instanceID string, input NewMessage) (*Message, error)
@@ -180,19 +181,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Message.OriginID(childComplexity), true
 
+	case "Message.thread":
+		if e.complexity.Message.Thread == nil {
+			break
+		}
+
+		return e.complexity.Message.Thread(childComplexity), true
+
 	case "Message.threadGroupId":
 		if e.complexity.Message.ThreadGroupID == nil {
 			break
 		}
 
 		return e.complexity.Message.ThreadGroupID(childComplexity), true
-
-	case "Message.threadId":
-		if e.complexity.Message.ThreadID == nil {
-			break
-		}
-
-		return e.complexity.Message.ThreadID(childComplexity), true
 
 	case "MessageAuthor.id":
 		if e.complexity.MessageAuthor.ID == nil {
@@ -595,7 +596,7 @@ type Message {
     id: ID!
     originId: String!
     author: MessageAuthor!
-    threadId: ID!
+    thread: Thread!
     body: String!
     threadGroupId: ID!
 }
@@ -955,7 +956,7 @@ func (ec *executionContext) _Message_author(ctx context.Context, field graphql.C
 	return ec.marshalNMessageAuthor2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthor(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Message_threadId(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
+func (ec *executionContext) _Message_thread(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -968,13 +969,13 @@ func (ec *executionContext) _Message_threadId(ctx context.Context, field graphql
 		Object:   "Message",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ThreadID, nil
+		return ec.resolvers.Message().Thread(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -986,10 +987,10 @@ func (ec *executionContext) _Message_threadId(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*Thread)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThread(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Message_body(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
@@ -3698,11 +3699,20 @@ func (ec *executionContext) _Message(ctx context.Context, sel ast.SelectionSet, 
 				}
 				return res
 			})
-		case "threadId":
-			out.Values[i] = ec._Message_threadId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
+		case "thread":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Message_thread(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "body":
 			out.Values[i] = ec._Message_body(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4697,6 +4707,16 @@ func (ec *executionContext) marshalNThread2ᚕgithubᚗcomᚋfeelfreelinuxᚋCha
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalNThread2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThread(ctx context.Context, sel ast.SelectionSet, v *Thread) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Thread(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNThreadGroup2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadGroup(ctx context.Context, sel ast.SelectionSet, v ThreadGroup) graphql.Marshaler {

@@ -37,7 +37,7 @@ type Message {
     id: ID!
     originId: String!
     author: MessageAuthor!
-    threadId: ID!
+    thread: Thread!
     body: String!
     threadGroupId: ID!
 }
