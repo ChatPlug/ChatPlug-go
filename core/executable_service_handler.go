@@ -8,9 +8,9 @@ type ExecutableServiceHandler struct {
 	*BaseServiceHandler
 }
 
-func (esh *ExecutableServiceHandler) VerifyDepedencies() bool {
+func (esh *ExecutableServiceHandler) Init() error {
 	esh.ServiceProcesses = make(map[string]*exec.Cmd)
-	return true
+	return nil
 }
 
 func (esh *ExecutableServiceHandler) LoadService(instanceID string) {

@@ -6,7 +6,7 @@ import (
 )
 
 type ServiceHandler interface {
-	VerifyDepedencies() bool
+	Init() error
 	LoadService(instanceID string)
 	ShutdownService(instanceID string)
 }

@@ -16,20 +16,25 @@ func (sl *ServiceLoader) Initialize() {
 func (sl *ServiceLoader) CreateServiceHandler(service *Service) ServiceHandler {
 	baseHandler := &BaseServiceHandler{App: sl.App, Service: service}
 
+	var handler ServiceHandler
 	switch service.Type {
 	case "node":
-		sl.handlers[service.Name] = &NodeServiceHandler{BaseServiceHandler: baseHandler}
+		handler = &NodeServiceHandler{BaseServiceHandler: baseHandler}
 	case "executable":
-		sl.handlers[service.Name] = &ExecutableServiceHandler{BaseServiceHandler: baseHandler}
+		handler = &ExecutableServiceHandler{BaseServiceHandler: baseHandler}
 	default:
 		log.Printf("Error: Service type %s unknown!", service.Type)
-		// crash?
+		// os.Exit(1)
 	}
 
-	sl.handlers[service.Name].VerifyDepedencies()
-	// TODO: crash when not verified?
+	if err := handler.Init(); err != nil {
+		log.Printf(err)
+		// os.Exit(1)
+	}
 
-	return sl.handlers[service.Name]
+	sl.handlers[service.Name] = handler
+
+	return handler
 }
 
 func (sl *ServiceLoader) GetHandlerForService(service *Service) ServiceHandler {
