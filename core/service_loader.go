@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"log"
 )
 
@@ -23,7 +22,7 @@ func (sl *ServiceLoader) CreateServiceHandler(service *Service) ServiceHandler {
 	case "executable":
 		sl.handlers[service.Name] = &ExecutableServiceHandler{BaseServiceHandler: baseHandler}
 	default:
-		log.Printf(fmt.Errorf("Service type %s unknown!", service.Type))
+		log.Printf("Error: Service type %s unknown!", service.Type)
 		// crash?
 	}
 
