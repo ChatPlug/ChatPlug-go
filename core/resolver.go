@@ -106,7 +106,7 @@ func (r *mutationResolver) SetInstanceStatus(ctx context.Context, instanceID str
 	r.App.db.First(&instance, "id = ?", instanceID)
 	r.App.db.Model(&instance).Update("Status", status.String())
 
-	if status.String() == "RUNNING" {
+	if status.String() == "RUNNING" && instance.Status != "RUNNING" {
 		r.App.sl.StartupInstance(instanceID)
 	}
 
