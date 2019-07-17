@@ -14,14 +14,7 @@ func (esh *ExecutableServiceHandler) VerifyDepedencies() bool {
 }
 
 func (esh *ExecutableServiceHandler) LoadService(instanceID string) {
-	var instance ServiceInstance
-	esh.App.db.Where("id = ?", instanceID).First(&instance)
-
-	service := esh.App.sm.FindServiceWithName(instance.ModuleName)
-
-	// Startup service
-	esh.ServiceProcesses[instanceID] = exec.Command("services/"+service.Name+"/"+service.EntryPoint, instance.ID)
-	esh.ServiceProcesses[instanceID].Run()
+	esh.RunInstance(exec.Command(esh.GetEntrypointPath()), instanceID)
 }
 
 func (esh *ExecutableServiceHandler) ShutdownService(instanceID string) {

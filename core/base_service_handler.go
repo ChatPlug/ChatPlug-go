@@ -1,6 +1,9 @@
 package core
 
-import "os/exec"
+import (
+	"os"
+	"os/exec"
+)
 
 type ServiceHandler interface {
 	VerifyDepedencies() bool
@@ -14,7 +17,25 @@ type BaseServiceHandler struct {
 	ServiceProcesses map[string]*exec.Cmd
 }
 
+func (bsh *BaseServiceHandler) GetPath() string {
+	return "services/" + bsh.Service.Name + "/"
+}
+
+func (bsh *BaseServiceHandler) GetEntrypointPath() string {
+	return bsh.GetPath() + bsh.Service.EntryPoint
+}
+
 func commandExists(cmd string) bool {
 	_, err := exec.LookPath(cmd)
 	return err == nil
+}
+
+func (bsh *BaseServiceHandler) RunInstance(command *exec.Cmd, instanceID string) {
+	command.Args = append(command.Args, instanceID)
+	bsh.ServiceProcesses[instanceID] = command
+
+	command.Stdout = os.Stdout
+	command.Stdin = os.Stdin
+
+	command.Run()
 }
