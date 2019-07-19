@@ -35,7 +35,7 @@ const (
 	errorMsg               = "error"                // Server -> Client
 	completeMsg            = "complete"             // Server -> Client
 	connectionKeepAliveMsg = "ka"                 // Server -> Client
-	sendMessageMutation = `mutation sendMessage($instanceId: ID!, $body: String!, $originId: String!, $originThreadId: String!, $username: String!, $authorOriginId: String!) {
+	sendMessageMutation = `mutation sendMessage($instanceId: ID!, $body: String!, $originId: String!, $originThreadId: String!, $username: String!, $authorOriginId: String!, $authorAvatarUrl: String!, $attachments: AttachmentInput!) {
 		sendMessage(
 		  instanceId: $instanceId,
 		  input: {
@@ -44,8 +44,10 @@ const (
 			originThreadId: $originThreadId,
 			author: {
 			  username: $username, 
-			  originId: $authorOriginId 
-			}
+			  originId: $authorOriginId,
+			  avatarUrl: $authorAvatarUrl
+			},
+			attachments: $attachments
 		  }
 		) {
 		  id
@@ -58,6 +60,12 @@ const (
 			  body
 			  id
 			  originId
+			  attachments {
+				  type
+				  sourceUrl
+				  originId
+				  id
+			  }
 			  thread {
 				  id
 				  originId
@@ -67,6 +75,7 @@ const (
 			  author {
 				  username
 				  originId
+				  avatarUrl
 			  }
 			}
 			targetThreadId
@@ -88,6 +97,19 @@ type MessageAuthor struct {
 	OriginID string    `json:"originId"`
 }
 
+type AttachmentInput struct {
+	OriginID string `json: originId"`
+	Type string    `json:"type"`
+	SourceURL string    `json:"sourceUrl"`
+}
+
+type Attachment struct {
+	ID string `json:"id"`
+	OriginID string `json:"originId"`
+	Type string    `json:"type"`
+	SourceURL string    `json:"sourceUrl"`
+}
+
 // Thread holds information about single thread
 type Thread struct {
 	ID string `json:"id"`
@@ -105,6 +127,7 @@ type Message struct {
 	Thread Thread `json:"thread"`
 	Body            string `json:"body"`
 	ThreadGroupID   string `json:"threadGroupId"`
+	Attachments []Attachment `json:"attachments"`
 } 
 
 // ErrorLocation holds data about location of gql error
@@ -233,7 +256,7 @@ func (gqc *ChatPlugClient) Close() {
 }
 
 // SendMessage sends a message with given data to core server via graphql
-func (gqc *ChatPlugClient) SendMessage(body string, originId string, originThreadId string, username string, authorOriginId string) {
+func (gqc *ChatPlugClient) SendMessage(body string, originId string, originThreadId string, username string, authorOriginId string, authorAvatarUrl string, attachments []AttachmentInput) {
 	req := graphql.NewRequest(sendMessageMutation)
 	req.Var("instanceId", gqc.instanceID)
 	req.Var("body", body)
@@ -241,6 +264,8 @@ func (gqc *ChatPlugClient) SendMessage(body string, originId string, originThrea
 	req.Var("originThreadId", originThreadId)
 	req.Var("username", username)
 	req.Var("authorOriginId", authorOriginId)
+	req.Var("authorAvatarUrl", authorAvatarUrl)
+	req.Var("attachments", attachments)
 	gqc.Request(req)
 }
 

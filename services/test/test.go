@@ -13,7 +13,7 @@ func main() {
 	msgChan := client.SubscribeToNewMessages()
 
 	for msg := range msgChan {
-		fmt.Printf(msg.Message.Body)
+		fmt.Printf(msg.Message.Attachments[0].SourceURL)
 	}
 	defer client.Close()
 }
