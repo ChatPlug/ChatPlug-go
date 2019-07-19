@@ -11,6 +11,7 @@ require (
 	github.com/gorilla/websocket v1.4.0
 	github.com/jinzhu/gorm v1.9.10
 	github.com/machinebox/graphql v0.2.2
+	github.com/manifoldco/promptui v0.3.2
 	github.com/matryer/is v1.2.0 // indirect
 	github.com/rs/xid v1.2.1
 	github.com/satori/go.uuid v1.2.0 // indirect

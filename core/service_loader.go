@@ -50,10 +50,7 @@ func (sl *ServiceLoader) StartupAllInstances() {
 	sl.App.db.Find(&instances)
 
 	for _, instance := range instances {
-		service := sl.App.sm.FindServiceWithName(instance.ModuleName)
-		sl.GetHandlerForService(service).LoadService(instance.ID)
-
-		sl.App.sm.LoadInstance(instance.ID)
+		sl.StartupInstance(instance.ID)
 	}
 }
 
@@ -62,9 +59,8 @@ func (sl *ServiceLoader) StartupInstance(instanceID string) {
 	sl.App.db.Where("id = ?", instanceID).First(&instance)
 
 	service := sl.App.sm.FindServiceWithName(instance.ModuleName)
-	sl.GetHandlerForService(service).LoadService(instanceID)
-
 	sl.App.sm.LoadInstance(instance.ID)
+	sl.GetHandlerForService(service).LoadService(instanceID)
 }
 
 func (sl *ServiceLoader) ShutdownAllInstances() {

@@ -1,7 +1,9 @@
 package core
 
 import (
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/99designs/gqlgen/handler"
 	"github.com/gin-contrib/cors"
@@ -16,6 +18,32 @@ func (app *App) RunHTTPServer() {
 	app.router.Use(cors.Default())
 	app.router.Any("/query", app.graphqlQueryHandler())
 	app.router.GET("/playground", app.graphqlPlaygroundHandler())
+
+	go func() {
+		for {
+			time.Sleep(time.Second)
+
+			log.Println("Checking if started...")
+			resp, err := http.Get("http://localhost:2137/playground")
+			if err != nil {
+				log.Println("Failed:", err)
+				continue
+			}
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				log.Println("Not OK:", resp.StatusCode)
+				continue
+			}
+
+			// Reached this point: server is up and running!
+			break
+		}
+
+		// Start all instances after the server is up and running
+		log.Println("Startin up!")
+		app.sl.StartupAllInstances()
+	}()
+
 	app.router.Run(":2137")
 }
 

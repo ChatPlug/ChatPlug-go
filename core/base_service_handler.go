@@ -37,5 +37,7 @@ func (bsh *BaseServiceHandler) RunInstance(command *exec.Cmd, instanceID string)
 	command.Stdout = os.Stdout
 	command.Stdin = os.Stdin
 
-	command.Run()
+	go func() {
+		command.Run()
+	}()
 }
