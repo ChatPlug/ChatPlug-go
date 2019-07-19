@@ -15,8 +15,18 @@ type AttachmentInput struct {
 }
 
 type MessageAuthorInput struct {
-	OriginID string `json:"originId"`
-	Username string `json:"username"`
+	OriginID  string `json:"originId"`
+	Username  string `json:"username"`
+	AvatarURL string `json:"avatarUrl"`
+}
+
+type MessageInput struct {
+	Body           string              `json:"body"`
+	Author         *MessageAuthorInput `json:"author"`
+	Attachments    []*AttachmentInput  `json:"attachments"`
+	OriginID       string              `json:"originId"`
+	OriginThreadID string              `json:"originThreadId"`
+	AvatarURL      *string             `json:"avatarUrl"`
 }
 
 type MessagePayload struct {
@@ -24,19 +34,11 @@ type MessagePayload struct {
 	Message        *Message `json:"message"`
 }
 
-type NewMessage struct {
-	Body           string              `json:"body"`
-	Author         *MessageAuthorInput `json:"author"`
-	Attachments    []*AttachmentInput  `json:"attachments"`
-	OriginID       string              `json:"originId"`
-	OriginThreadID string              `json:"originThreadId"`
-}
-
-type NewThread struct {
-	ServiceID string `json:"serviceId"`
-	OriginID  string `json:"originId"`
-	GroupID   string `json:"groupId"`
-	Name      string `json:"name"`
+type ThreadInput struct {
+	InstanceID string `json:"instanceId"`
+	OriginID   string `json:"originId"`
+	GroupID    string `json:"groupId"`
+	Name       string `json:"name"`
 }
 
 type AttachmentType string

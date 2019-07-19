@@ -47,6 +47,7 @@ type MessageAuthor {
     id: ID!
     originId: String!
     username: String!
+    avatarUrl: String!
 }
 
 type MessagePayload {
@@ -71,6 +72,7 @@ type Attachment {
 input MessageAuthorInput {
     originId: String!
     username: String!
+    avatarUrl: String!
 }
 
 input AttachmentInput {
@@ -79,16 +81,17 @@ input AttachmentInput {
     sourceUrl: String!
 }
 
-input NewMessage {
+input MessageInput {
     body: String!
     author: MessageAuthorInput!
     attachments: [AttachmentInput!]!
     originId: String!
     originThreadId: String!
+    avatarUrl: String
 }
 
-input NewThread {
-    serviceId: String!
+input ThreadInput {
+    instanceId: String!
     originId: String!
     groupId: ID!
     name: String!
@@ -102,11 +105,11 @@ type Query {
 }
 
 type Mutation {
-    sendMessage(instanceId: ID!, input: NewMessage!): Message!
+    sendMessage(instanceId: ID!, input: MessageInput!): Message!
     createThreadGroup(name: String!): ThreadGroup!
     deleteThreadGroup(id: ID!): ID!
     deleteThread(id: ID!): ID!
-    addThreadToGroup(input: NewThread): ThreadGroup!
+    addThreadToGroup(input: ThreadInput): ThreadGroup!
     setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!
     createNewInstance(serviceModuleName: String!, instanceName: String!): ServiceInstance!
 }

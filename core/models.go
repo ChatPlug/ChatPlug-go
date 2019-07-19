@@ -85,7 +85,8 @@ type ServiceInstance struct {
 
 type MessageAuthor struct {
 	Base
-	Username string    `json:"username"`
-	OriginID string    `json:"originId"`
-	Messages []Message `json:"messages"`
+	Username  string    `json:"username"`
+	OriginID  string    `json:"originId"`
+	AvatarURL string    `json:"avatarUrl" gorm:"default:'https://i.imgur.com/3yPh9fE.png'"`
+	Messages  []Message `json:"messages"`
 }
