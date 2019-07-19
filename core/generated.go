@@ -45,7 +45,15 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Attachment struct {
+		ID        func(childComplexity int) int
+		OriginID  func(childComplexity int) int
+		SourceURL func(childComplexity int) int
+		Type      func(childComplexity int) int
+	}
+
 	Message struct {
+		Attachments   func(childComplexity int) int
 		Author        func(childComplexity int) int
 		Body          func(childComplexity int) int
 		ID            func(childComplexity int) int
@@ -152,6 +160,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Attachment.id":
+		if e.complexity.Attachment.ID == nil {
+			break
+		}
+
+		return e.complexity.Attachment.ID(childComplexity), true
+
+	case "Attachment.originId":
+		if e.complexity.Attachment.OriginID == nil {
+			break
+		}
+
+		return e.complexity.Attachment.OriginID(childComplexity), true
+
+	case "Attachment.sourceUrl":
+		if e.complexity.Attachment.SourceURL == nil {
+			break
+		}
+
+		return e.complexity.Attachment.SourceURL(childComplexity), true
+
+	case "Attachment.type":
+		if e.complexity.Attachment.Type == nil {
+			break
+		}
+
+		return e.complexity.Attachment.Type(childComplexity), true
+
+	case "Message.attachments":
+		if e.complexity.Message.Attachments == nil {
+			break
+		}
+
+		return e.complexity.Message.Attachments(childComplexity), true
 
 	case "Message.author":
 		if e.complexity.Message.Author == nil {
@@ -599,6 +642,7 @@ type Message {
     thread: Thread!
     body: String!
     threadGroupId: ID!
+    attachments: [Attachment!]!
 }
 
 type MessageAuthor {
@@ -612,14 +656,35 @@ type MessagePayload {
     message: Message!
 }
 
+enum AttachmentType {
+    FILE
+    IMAGE
+    AUDIO
+    VIDEO
+}
+
+type Attachment {
+    id: ID!
+    originId: String!
+    type: AttachmentType!
+    sourceUrl: String!
+}
+
 input MessageAuthorInput {
     originId: String!
     username: String!
 }
 
+input AttachmentInput {
+    originId: String!
+    type: AttachmentType!
+    sourceUrl: String!
+}
+
 input NewMessage {
     body: String!
     author: MessageAuthorInput!
+    attachments: [AttachmentInput!]!
     originId: String!
     originThreadId: String!
 }
@@ -845,6 +910,154 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
+func (ec *executionContext) _Attachment_id(ctx context.Context, field graphql.CollectedField, obj *Attachment) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Attachment",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Attachment_originId(ctx context.Context, field graphql.CollectedField, obj *Attachment) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Attachment",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OriginID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Attachment_type(ctx context.Context, field graphql.CollectedField, obj *Attachment) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Attachment",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(AttachmentType)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNAttachmentType2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Attachment_sourceUrl(ctx context.Context, field graphql.CollectedField, obj *Attachment) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Attachment",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SourceURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Message_id(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -1065,6 +1278,43 @@ func (ec *executionContext) _Message_threadGroupId(ctx context.Context, field gr
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Message_attachments(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Message",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Attachments, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]Attachment)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNAttachment2ᚕgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachment(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MessageAuthor_id(ctx context.Context, field graphql.CollectedField, obj *MessageAuthor) (ret graphql.Marshaler) {
@@ -3560,6 +3810,36 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAttachmentInput(ctx context.Context, obj interface{}) (AttachmentInput, error) {
+	var it AttachmentInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "originId":
+			var err error
+			it.OriginID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "type":
+			var err error
+			it.Type, err = ec.unmarshalNAttachmentType2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "sourceUrl":
+			var err error
+			it.SourceURL, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputMessageAuthorInput(ctx context.Context, obj interface{}) (MessageAuthorInput, error) {
 	var it MessageAuthorInput
 	var asMap = obj.(map[string]interface{})
@@ -3599,6 +3879,12 @@ func (ec *executionContext) unmarshalInputNewMessage(ctx context.Context, obj in
 		case "author":
 			var err error
 			it.Author, err = ec.unmarshalNMessageAuthorInput2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageAuthorInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "attachments":
+			var err error
+			it.Attachments, err = ec.unmarshalNAttachmentInput2ᚕᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentInput(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3664,6 +3950,48 @@ func (ec *executionContext) unmarshalInputNewThread(ctx context.Context, obj int
 
 // region    **************************** object.gotpl ****************************
 
+var attachmentImplementors = []string{"Attachment"}
+
+func (ec *executionContext) _Attachment(ctx context.Context, sel ast.SelectionSet, obj *Attachment) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, attachmentImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Attachment")
+		case "id":
+			out.Values[i] = ec._Attachment_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "originId":
+			out.Values[i] = ec._Attachment_originId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "type":
+			out.Values[i] = ec._Attachment_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "sourceUrl":
+			out.Values[i] = ec._Attachment_sourceUrl(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var messageImplementors = []string{"Message"}
 
 func (ec *executionContext) _Message(ctx context.Context, sel ast.SelectionSet, obj *Message) graphql.Marshaler {
@@ -3720,6 +4048,11 @@ func (ec *executionContext) _Message(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "threadGroupId":
 			out.Values[i] = ec._Message_threadGroupId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "attachments":
+			out.Values[i] = ec._Message_attachments(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
@@ -4382,6 +4715,88 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
+
+func (ec *executionContext) marshalNAttachment2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachment(ctx context.Context, sel ast.SelectionSet, v Attachment) graphql.Marshaler {
+	return ec._Attachment(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAttachment2ᚕgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachment(ctx context.Context, sel ast.SelectionSet, v []Attachment) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		rctx := &graphql.ResolverContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithResolverContext(ctx, rctx)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNAttachment2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachment(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) unmarshalNAttachmentInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentInput(ctx context.Context, v interface{}) (AttachmentInput, error) {
+	return ec.unmarshalInputAttachmentInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalNAttachmentInput2ᚕᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentInput(ctx context.Context, v interface{}) ([]*AttachmentInput, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]*AttachmentInput, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNAttachmentInput2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNAttachmentInput2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentInput(ctx context.Context, v interface{}) (*AttachmentInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalNAttachmentInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentInput(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) unmarshalNAttachmentType2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentType(ctx context.Context, v interface{}) (AttachmentType, error) {
+	var res AttachmentType
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNAttachmentType2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐAttachmentType(ctx context.Context, sel ast.SelectionSet, v AttachmentType) graphql.Marshaler {
+	return v
+}
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	return graphql.UnmarshalBoolean(v)

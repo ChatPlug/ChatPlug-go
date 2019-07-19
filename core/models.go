@@ -32,12 +32,21 @@ func (base *Base) BeforeCreate(scope *gorm.Scope) error {
 
 type Message struct {
 	Base
-	OriginID        string `json:"originId"`
-	MessageAuthorID string `json:"messageAuthorId"`
-	ThreadID        string `json:"threadId"`
-	Body            string `json:"body"`
-	ThreadGroupID   string `json:"threadGroupId"`
-	Author          string `gorm:"-" json:"author"`
+	OriginID        string       `json:"originId"`
+	MessageAuthorID string       `json:"messageAuthorId"`
+	ThreadID        string       `json:"threadId"`
+	Body            string       `json:"body"`
+	ThreadGroupID   string       `json:"threadGroupId"`
+	Author          string       `gorm:"-" json:"author"`
+	Attachments     []Attachment `json:"attachments"`
+}
+
+type Attachment struct {
+	Base
+	OriginID  string         `json:"originId"`
+	SourceURL string         `json:"sourceUrl"`
+	Type      AttachmentType `json:"type"`
+	MessageID string
 }
 
 type ThreadGroup struct {

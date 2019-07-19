@@ -41,11 +41,25 @@ func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, i
 			log.Println(group.Name)
 			var messageAuthor MessageAuthor
 			r.App.db.Where("origin_id = ?", input.OriginID).FirstOrCreate(&messageAuthor, MessageAuthor{Username: input.Author.Username, OriginID: input.Author.OriginID})
+
+			attachments := make([]Attachment, 0)
+
+			for _, attachment := range input.Attachments {
+				attachmentObj := Attachment{
+					Type:      attachment.Type,
+					OriginID:  attachment.OriginID,
+					SourceURL: attachment.SourceURL,
+				}
+
+				attachments = append(attachments, attachmentObj)
+			}
+
 			msg := &Message{
 				OriginID:        input.OriginID,
 				Body:            input.Body,
 				ThreadID:        rightThreadID,
 				MessageAuthorID: messageAuthor.ID,
+				Attachments:     attachments,
 			}
 
 			r.App.db.Model(&group).Association("Messages").Append(msg)
@@ -128,7 +142,7 @@ type queryResolver struct{ *Resolver }
 
 func (r *queryResolver) Messages(ctx context.Context) ([]*Message, error) {
 	messages := []*Message{}
-	r.App.db.Find(&messages)
+	r.App.db.Preload("Attachments").Find(&messages)
 	return messages, nil
 }
 

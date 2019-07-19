@@ -40,6 +40,7 @@ type Message {
     thread: Thread!
     body: String!
     threadGroupId: ID!
+    attachments: [Attachment!]!
 }
 
 type MessageAuthor {
@@ -53,14 +54,35 @@ type MessagePayload {
     message: Message!
 }
 
+enum AttachmentType {
+    FILE
+    IMAGE
+    AUDIO
+    VIDEO
+}
+
+type Attachment {
+    id: ID!
+    originId: String!
+    type: AttachmentType!
+    sourceUrl: String!
+}
+
 input MessageAuthorInput {
     originId: String!
     username: String!
 }
 
+input AttachmentInput {
+    originId: String!
+    type: AttachmentType!
+    sourceUrl: String!
+}
+
 input NewMessage {
     body: String!
     author: MessageAuthorInput!
+    attachments: [AttachmentInput!]!
     originId: String!
     originThreadId: String!
 }

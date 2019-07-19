@@ -37,6 +37,7 @@ func (app *App) Init() {
 	app.db.AutoMigrate(&Message{})
 	app.db.AutoMigrate(&MessageAuthor{})
 	app.db.AutoMigrate(&ServiceInstance{})
+	app.db.AutoMigrate(&Attachment{})
 
 	app.sl.StartupAllInstances()
 }

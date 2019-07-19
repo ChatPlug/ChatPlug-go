@@ -8,6 +8,12 @@ import (
 	"strconv"
 )
 
+type AttachmentInput struct {
+	OriginID  string         `json:"originId"`
+	Type      AttachmentType `json:"type"`
+	SourceURL string         `json:"sourceUrl"`
+}
+
 type MessageAuthorInput struct {
 	OriginID string `json:"originId"`
 	Username string `json:"username"`
@@ -21,6 +27,7 @@ type MessagePayload struct {
 type NewMessage struct {
 	Body           string              `json:"body"`
 	Author         *MessageAuthorInput `json:"author"`
+	Attachments    []*AttachmentInput  `json:"attachments"`
 	OriginID       string              `json:"originId"`
 	OriginThreadID string              `json:"originThreadId"`
 }
@@ -30,6 +37,51 @@ type NewThread struct {
 	OriginID  string `json:"originId"`
 	GroupID   string `json:"groupId"`
 	Name      string `json:"name"`
+}
+
+type AttachmentType string
+
+const (
+	AttachmentTypeFile  AttachmentType = "FILE"
+	AttachmentTypeImage AttachmentType = "IMAGE"
+	AttachmentTypeAudio AttachmentType = "AUDIO"
+	AttachmentTypeVideo AttachmentType = "VIDEO"
+)
+
+var AllAttachmentType = []AttachmentType{
+	AttachmentTypeFile,
+	AttachmentTypeImage,
+	AttachmentTypeAudio,
+	AttachmentTypeVideo,
+}
+
+func (e AttachmentType) IsValid() bool {
+	switch e {
+	case AttachmentTypeFile, AttachmentTypeImage, AttachmentTypeAudio, AttachmentTypeVideo:
+		return true
+	}
+	return false
+}
+
+func (e AttachmentType) String() string {
+	return string(e)
+}
+
+func (e *AttachmentType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AttachmentType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AttachmentType", str)
+	}
+	return nil
+}
+
+func (e AttachmentType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type InstanceStatus string

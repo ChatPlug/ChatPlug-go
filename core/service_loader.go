@@ -28,7 +28,7 @@ func (sl *ServiceLoader) CreateServiceHandler(service *Service) ServiceHandler {
 	}
 
 	if err := handler.Init(); err != nil {
-		log.Printf(err)
+		log.Printf(err.Error())
 		// os.Exit(1)
 	}
 
