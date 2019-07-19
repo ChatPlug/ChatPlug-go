@@ -11,11 +11,13 @@ type App struct {
 	db     *gorm.DB
 	sm     *ServiceManager
 	sl     *ServiceLoader
+	ch     *ConfigurationHandler
 }
 
 func NewApp() *App {
 	app := &App{
 		sm: &ServiceManager{},
+		ch: &ConfigurationHandler{},
 	}
 	app.sl = &ServiceLoader{App: app}
 	return app
@@ -26,6 +28,7 @@ func (app *App) Init() {
 
 	app.sm.LoadAvailableServices()
 	app.sl.Initialize()
+	app.ch.WatchForConfiguration()
 
 	app.db, err = gorm.Open("sqlite3", "cp.db")
 	if err != nil {

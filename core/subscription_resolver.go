@@ -29,3 +29,10 @@ func (r *subscriptionResolver) MessageReceived(ctx context.Context, instanceID s
 	}()
 	return messages, nil
 }
+
+func (r *subscriptionResolver) ConfigurationReceived(ctx context.Context, configurationRequest ConfigurationRequest) (<-chan *ConfigurationResponse, error) {
+	configurationRequest.resChan = make(chan *ConfigurationResponse)
+	r.App.ch.configurationQueue <- &configurationRequest
+
+	return configurationRequest.resChan, nil
+}

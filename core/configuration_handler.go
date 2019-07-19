@@ -2,46 +2,38 @@ package core
 
 import (
 	"errors"
+	"log"
+	"os"
+	"os/exec"
 	"strconv"
 
 	"github.com/manifoldco/promptui"
 )
 
-type ConfigurationFieldType string
-
-const (
-	Boolean ConfigurationFieldType = "boolean"
-	Number  ConfigurationFieldType = "number"
-	String  ConfigurationFieldType = "string"
-)
-
-var configurationFieldTypes = []string{"boolean", "number", "string"}
-
-type ConfigurationField struct {
-	Type         ConfigurationFieldType `json:"type"`
-	DefaultValue string                 `json:"defaultValue"`
-	Optional     bool                   `json:"optional"`
-	Hint         string                 `json:"hint"`
-	Mask         bool                   `json:"mask"`
-}
-
-type ConfigurationRequest struct {
-	fields []ConfigurationField `json:"fields"`
-}
-
-type ConfigurationResponse struct {
-	fields []string `json:"fieldValues"`
-}
-
 type ConfigurationHandler struct {
+	configurationQueue chan *ConfigurationRequest
+}
+
+func (ch *ConfigurationHandler) WatchForConfiguration() {
+	ch.configurationQueue = make(chan *ConfigurationRequest, 10)
+	go func() {
+		for configRequest := range ch.configurationQueue {
+			clearConsole()
+			log.Println("Configuration requested!")
+			response, err := ch.PromptForConfiguration(configRequest)
+			if err == nil {
+				configRequest.resChan <- response
+			}
+		}
+	}()
 }
 
 func (ch *ConfigurationHandler) PromptForConfiguration(request *ConfigurationRequest) (*ConfigurationResponse, error) {
 	response := &ConfigurationResponse{
-		fields: make([]string, 0),
+		FieldValues: make([]string, 0),
 	}
 
-	for _, field := range request.fields {
+	for _, field := range request.Fields {
 		prompt := promptui.Prompt{
 			Label: field.Hint,
 		}
@@ -55,7 +47,7 @@ func (ch *ConfigurationHandler) PromptForConfiguration(request *ConfigurationReq
 		}
 
 		switch fieldType := field.Type; fieldType {
-		case Boolean:
+		case "BOOLEAN":
 			prompt.Validate = func(input string) error {
 				if input != "y" && input != "n" && input != "Y" && input != "N" {
 					return errors.New("Boolean should be \"y\" or \"n\"")
@@ -63,9 +55,9 @@ func (ch *ConfigurationHandler) PromptForConfiguration(request *ConfigurationReq
 				return nil
 			}
 			break
-		case String:
+		case "STRING":
 			break
-		case Number:
+		case "NUMBER":
 			prompt.Validate = func(input string) error {
 				_, err := strconv.ParseFloat(input, 64)
 				if err != nil {
@@ -80,8 +72,14 @@ func (ch *ConfigurationHandler) PromptForConfiguration(request *ConfigurationReq
 		if err != nil {
 			return nil, errors.New("Configuration failed")
 		}
-		response.fields = append(response.fields, result)
+		response.FieldValues = append(response.FieldValues, result)
 	}
 
 	return response, nil
+}
+
+func clearConsole() {
+	c := exec.Command("clear")
+	c.Stdout = os.Stdout
+	c.Run()
 }

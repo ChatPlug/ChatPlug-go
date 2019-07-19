@@ -16,6 +16,7 @@ type Service {
 enum InstanceStatus {
   RUNNING
   INITIALIZED
+  CONFIGURED
   SHUTTING_DOWN
   STOPPED
 }
@@ -104,6 +105,29 @@ type Query {
   threadGroups: [ThreadGroup!]!
 }
 
+enum ConfigurationFieldType {
+    BOOLEAN
+    STRING
+    NUMBER
+}
+
+input ConfigurationField {
+	type: ConfigurationFieldType!
+    defaultValue: String!
+    optional: Boolean!
+    hint: String!
+    mask: Boolean!
+}
+
+input ConfigurationRequest {
+	fields: [ConfigurationField!]!
+}
+
+type ConfigurationResponse {
+	fieldValues: [String!]!
+}
+
+
 type Mutation {
     sendMessage(instanceId: ID!, input: MessageInput!): Message!
     createThreadGroup(name: String!): ThreadGroup!
@@ -112,9 +136,11 @@ type Mutation {
     addThreadToGroup(input: ThreadInput): ThreadGroup!
     setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!
     createNewInstance(serviceModuleName: String!, instanceName: String!): ServiceInstance!
+
 }
 
 type Subscription {
     messageReceived(instanceId: ID!): MessagePayload!
+    configurationReceived(configuration: ConfigurationRequest!): ConfigurationResponse!
 }
 

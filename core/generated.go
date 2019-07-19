@@ -52,6 +52,10 @@ type ComplexityRoot struct {
 		Type      func(childComplexity int) int
 	}
 
+	ConfigurationResponse struct {
+		FieldValues func(childComplexity int) int
+	}
+
 	Message struct {
 		Attachments   func(childComplexity int) int
 		Author        func(childComplexity int) int
@@ -104,7 +108,8 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		MessageReceived func(childComplexity int, instanceID string) int
+		ConfigurationReceived func(childComplexity int, configuration ConfigurationRequest) int
+		MessageReceived       func(childComplexity int, instanceID string) int
 	}
 
 	Thread struct {
@@ -145,6 +150,7 @@ type QueryResolver interface {
 }
 type SubscriptionResolver interface {
 	MessageReceived(ctx context.Context, instanceID string) (<-chan *MessagePayload, error)
+	ConfigurationReceived(ctx context.Context, configuration ConfigurationRequest) (<-chan *ConfigurationResponse, error)
 }
 
 type executableSchema struct {
@@ -189,6 +195,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Attachment.Type(childComplexity), true
+
+	case "ConfigurationResponse.fieldValues":
+		if e.complexity.ConfigurationResponse.FieldValues == nil {
+			break
+		}
+
+		return e.complexity.ConfigurationResponse.FieldValues(childComplexity), true
 
 	case "Message.attachments":
 		if e.complexity.Message.Attachments == nil {
@@ -434,6 +447,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ServiceInstance.Status(childComplexity), true
+
+	case "Subscription.configurationReceived":
+		if e.complexity.Subscription.ConfigurationReceived == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_configurationReceived_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.ConfigurationReceived(childComplexity, args["configuration"].(ConfigurationRequest)), true
 
 	case "Subscription.messageReceived":
 		if e.complexity.Subscription.MessageReceived == nil {
@@ -714,6 +739,29 @@ type Query {
   threadGroups: [ThreadGroup!]!
 }
 
+enum ConfigurationFieldType {
+    BOOLEAN
+    STRING
+    NUMBER
+}
+
+input ConfigurationField {
+	type: ConfigurationFieldType!
+    defaultValue: String!
+    optional: Boolean!
+    hint: String!
+    mask: Boolean!
+}
+
+input ConfigurationRequest {
+	fields: [ConfigurationField!]!
+}
+
+type ConfigurationResponse {
+	fieldValues: [String!]!
+}
+
+
 type Mutation {
     sendMessage(instanceId: ID!, input: MessageInput!): Message!
     createThreadGroup(name: String!): ThreadGroup!
@@ -722,10 +770,12 @@ type Mutation {
     addThreadToGroup(input: ThreadInput): ThreadGroup!
     setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!
     createNewInstance(serviceModuleName: String!, instanceName: String!): ServiceInstance!
+
 }
 
 type Subscription {
     messageReceived(instanceId: ID!): MessagePayload!
+    configurationReceived(configuration: ConfigurationRequest!): ConfigurationResponse!
 }
 
 `},
@@ -868,6 +918,20 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_configurationReceived_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 ConfigurationRequest
+	if tmp, ok := rawArgs["configuration"]; ok {
+		arg0, err = ec.unmarshalNConfigurationRequest2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationRequest(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["configuration"] = arg0
 	return args, nil
 }
 
@@ -1067,6 +1131,43 @@ func (ec *executionContext) _Attachment_sourceUrl(ctx context.Context, field gra
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ConfigurationResponse_fieldValues(ctx context.Context, field graphql.CollectedField, obj *ConfigurationResponse) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ConfigurationResponse",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FieldValues, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2ᚕstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Message_id(ctx context.Context, field graphql.CollectedField, obj *Message) (ret graphql.Marshaler) {
@@ -2332,6 +2433,40 @@ func (ec *executionContext) _Subscription_messageReceived(ctx context.Context, f
 			graphql.MarshalString(field.Alias).MarshalGQL(w)
 			w.Write([]byte{':'})
 			ec.marshalNMessagePayload2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessagePayload(ctx, field.Selections, res).MarshalGQL(w)
+			w.Write([]byte{'}'})
+		})
+	}
+}
+
+func (ec *executionContext) _Subscription_configurationReceived(ctx context.Context, field graphql.CollectedField) func() graphql.Marshaler {
+	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{
+		Field: field,
+		Args:  nil,
+	})
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Subscription_configurationReceived_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	// FIXME: subscriptions are missing request middleware stack https://github.com/99designs/gqlgen/issues/259
+	//          and Tracer stack
+	rctx := ctx
+	results, err := ec.resolvers.Subscription().ConfigurationReceived(rctx, args["configuration"].(ConfigurationRequest))
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	return func() graphql.Marshaler {
+		res, ok := <-results
+		if !ok {
+			return nil
+		}
+		return graphql.WriterFunc(func(w io.Writer) {
+			w.Write([]byte{'{'})
+			graphql.MarshalString(field.Alias).MarshalGQL(w)
+			w.Write([]byte{':'})
+			ec.marshalNConfigurationResponse2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResponse(ctx, field.Selections, res).MarshalGQL(w)
 			w.Write([]byte{'}'})
 		})
 	}
@@ -3888,6 +4023,66 @@ func (ec *executionContext) unmarshalInputAttachmentInput(ctx context.Context, o
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputConfigurationField(ctx context.Context, obj interface{}) (ConfigurationField, error) {
+	var it ConfigurationField
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "type":
+			var err error
+			it.Type, err = ec.unmarshalNConfigurationFieldType2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationFieldType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "defaultValue":
+			var err error
+			it.DefaultValue, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "optional":
+			var err error
+			it.Optional, err = ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "hint":
+			var err error
+			it.Hint, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "mask":
+			var err error
+			it.Mask, err = ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputConfigurationRequest(ctx context.Context, obj interface{}) (ConfigurationRequest, error) {
+	var it ConfigurationRequest
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "fields":
+			var err error
+			it.Fields, err = ec.unmarshalNConfigurationField2ᚕgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputMessageAuthorInput(ctx context.Context, obj interface{}) (MessageAuthorInput, error) {
 	var it MessageAuthorInput
 	var asMap = obj.(map[string]interface{})
@@ -4038,6 +4233,33 @@ func (ec *executionContext) _Attachment(ctx context.Context, sel ast.SelectionSe
 			}
 		case "sourceUrl":
 			out.Values[i] = ec._Attachment_sourceUrl(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var configurationResponseImplementors = []string{"ConfigurationResponse"}
+
+func (ec *executionContext) _ConfigurationResponse(ctx context.Context, sel ast.SelectionSet, obj *ConfigurationResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, configurationResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ConfigurationResponse")
+		case "fieldValues":
+			out.Values[i] = ec._ConfigurationResponse_fieldValues(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4437,6 +4659,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	switch fields[0].Name {
 	case "messageReceived":
 		return ec._Subscription_messageReceived(ctx, fields[0])
+	case "configurationReceived":
+		return ec._Subscription_configurationReceived(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -4877,6 +5101,57 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) unmarshalNConfigurationField2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationField(ctx context.Context, v interface{}) (ConfigurationField, error) {
+	return ec.unmarshalInputConfigurationField(ctx, v)
+}
+
+func (ec *executionContext) unmarshalNConfigurationField2ᚕgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationField(ctx context.Context, v interface{}) ([]ConfigurationField, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]ConfigurationField, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNConfigurationField2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationField(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNConfigurationFieldType2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationFieldType(ctx context.Context, v interface{}) (ConfigurationFieldType, error) {
+	var res ConfigurationFieldType
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNConfigurationFieldType2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationFieldType(ctx context.Context, sel ast.SelectionSet, v ConfigurationFieldType) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNConfigurationRequest2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationRequest(ctx context.Context, v interface{}) (ConfigurationRequest, error) {
+	return ec.unmarshalInputConfigurationRequest(ctx, v)
+}
+
+func (ec *executionContext) marshalNConfigurationResponse2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResponse(ctx context.Context, sel ast.SelectionSet, v ConfigurationResponse) graphql.Marshaler {
+	return ec._ConfigurationResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNConfigurationResponse2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResponse(ctx context.Context, sel ast.SelectionSet, v *ConfigurationResponse) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._ConfigurationResponse(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
 	return graphql.UnmarshalID(v)
 }
@@ -5146,6 +5421,35 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstring(ctx context.Context, v interface{}) ([]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstring(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalNThread2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThread(ctx context.Context, sel ast.SelectionSet, v Thread) graphql.Marshaler {

@@ -65,6 +65,23 @@ type Thread struct {
 	ServiceInstanceID string    `json:"serviceInstanceId"`
 }
 
+type ConfigurationField struct {
+	Type         ConfigurationFieldType `json:"type"`
+	DefaultValue string                 `json:"defaultValue"`
+	Optional     bool                   `json:"optional"`
+	Hint         string                 `json:"hint"`
+	Mask         bool                   `json:"mask"`
+}
+
+type ConfigurationRequest struct {
+	Fields  []ConfigurationField `json:"fields"`
+	resChan chan *ConfigurationResponse
+}
+
+type ConfigurationResponse struct {
+	FieldValues []string `json:"fieldValues"`
+}
+
 type Service struct {
 	Base
 	Name        string `json:"name"`

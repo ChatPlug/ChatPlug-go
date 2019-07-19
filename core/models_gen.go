@@ -86,6 +86,49 @@ func (e AttachmentType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
+type ConfigurationFieldType string
+
+const (
+	ConfigurationFieldTypeBoolean ConfigurationFieldType = "BOOLEAN"
+	ConfigurationFieldTypeString  ConfigurationFieldType = "STRING"
+	ConfigurationFieldTypeNumber  ConfigurationFieldType = "NUMBER"
+)
+
+var AllConfigurationFieldType = []ConfigurationFieldType{
+	ConfigurationFieldTypeBoolean,
+	ConfigurationFieldTypeString,
+	ConfigurationFieldTypeNumber,
+}
+
+func (e ConfigurationFieldType) IsValid() bool {
+	switch e {
+	case ConfigurationFieldTypeBoolean, ConfigurationFieldTypeString, ConfigurationFieldTypeNumber:
+		return true
+	}
+	return false
+}
+
+func (e ConfigurationFieldType) String() string {
+	return string(e)
+}
+
+func (e *ConfigurationFieldType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ConfigurationFieldType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ConfigurationFieldType", str)
+	}
+	return nil
+}
+
+func (e ConfigurationFieldType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
 type InstanceStatus string
 
 const (
