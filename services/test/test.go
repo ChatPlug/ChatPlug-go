@@ -24,10 +24,12 @@ func main() {
 	for _, a := range config.FieldValues {
 		fmt.Println(a)
 	}
+
 	msgChan := client.SubscribeToNewMessages()
 
 	for msg := range msgChan {
-		fmt.Printf(msg.Message.Attachments[0].SourceURL)
+		fmt.Printf("got a msg")
+		fmt.Printf(msg.Message.Body)
 	}
 	defer client.Close()
 }

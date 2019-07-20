@@ -22,6 +22,7 @@ type ChatPlugClient struct {
 	session *session
 	client *graphql.Client
 	instanceID string
+	wsEndpoint string
 }
 
 const (
@@ -250,6 +251,7 @@ func (s *session) Subscribe(query string, variables map[string]interface{}) (<-c
 func (gqc *ChatPlugClient) Connect(instanceID string, httpEndpoint string, wsEndpoint string) {
 	gqc.client = graphql.NewClient(httpEndpoint)
 	gqc.instanceID = instanceID
+	gqc.wsEndpoint = wsEndpoint
 	c := wsConnect(wsEndpoint)
 
 	gqc.session = &session{
@@ -285,6 +287,15 @@ func (gqc *ChatPlugClient) SendMessage(body string, originId string, originThrea
 
 // SubscribeToNewMessages starts a subscription to core server's messages and returns a chan with parsed data
 func (gqc *ChatPlugClient) SubscribeToNewMessages() <-chan *MessageReceived {
+	// gqc.session.ws.Close()
+	c := wsConnect(gqc.wsEndpoint)
+
+	gqc.session = &session{
+		ws: c,
+	}
+
+	gqc.session.ws.WriteJSON(&operationMessage{Type: connectionInitMsg})
+	gqc.session.ReadOp()
 
 	variables := make(map[string]interface{})
 	variables["id"] = gqc.instanceID
