@@ -1,6 +1,9 @@
 package core
 
-import "context"
+import (
+	"context"
+	"log"
+)
 
 func (r *Resolver) Subscription() SubscriptionResolver {
 	return &subscriptionResolver{r}
@@ -31,6 +34,7 @@ func (r *subscriptionResolver) MessageReceived(ctx context.Context, instanceID s
 }
 
 func (r *subscriptionResolver) ConfigurationReceived(ctx context.Context, configurationRequest ConfigurationRequest) (<-chan *ConfigurationResponse, error) {
+	log.Println("A O S")
 	configurationRequest.resChan = make(chan *ConfigurationResponse)
 	r.App.ch.configurationQueue <- &configurationRequest
 

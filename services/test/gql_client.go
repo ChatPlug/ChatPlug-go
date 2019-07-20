@@ -35,7 +35,8 @@ const (
 	errorMsg               = "error"                // Server -> Client
 	completeMsg            = "complete"             // Server -> Client
 	connectionKeepAliveMsg = "ka"                 // Server -> Client
-	sendMessageMutation = `mutation sendMessage($instanceId: ID!, $body: String!, $originId: String!, $originThreadId: String!, $username: String!, $authorOriginId: String!, $authorAvatarUrl: String!, $attachments: AttachmentInput!) {
+	sendMessageMutation = `
+	mutation sendMessage($instanceId: ID!, $body: String!, $originId: String!, $originThreadId: String!, $username: String!, $authorOriginId: String!, $authorAvatarUrl: String!, $attachments: AttachmentInput!) {
 		sendMessage(
 		  instanceId: $instanceId,
 		  input: {
@@ -81,6 +82,13 @@ const (
 			targetThreadId
 		  }
 		}`
+	requestConfigurationRequest = `
+	subscription confRequest($fields: [ConfigurationField!]!){
+		configurationReceived(configuration:{fields: $fields}) {
+		  fieldValues
+		}
+	  }`
+
 	setInstanceStatusMutation = `
 	mutation ($id: ID!) {
 		setInstanceStatus(instanceId:$id, status:INITIALIZED) {
@@ -150,6 +158,12 @@ type MessageReceived struct {
 type messageReceivedPayload struct {
 	Data struct {
 		MessageReceived MessageReceived `json:"messageReceived"`
+	}`json:"data"`
+}
+
+type configurationReceivedPayload struct {
+	Data struct {
+		ConfigurationReceived ConfigurationResponse `json:"configurationReceived"`
 	}`json:"data"`
 }
 
@@ -287,6 +301,45 @@ func (gqc *ChatPlugClient) SubscribeToNewMessages() <-chan *MessageReceived {
 		}
 	}()
 	return channel
+}
+
+type ConfigurationField struct {
+	Type         string `json:"type"`
+	DefaultValue string                 `json:"defaultValue"`
+	Optional     bool                   `json:"optional"`
+	Hint         string                 `json:"hint"`
+	Mask         bool                   `json:"mask"`
+}
+
+type ConfigurationRequest struct {
+	Fields  []ConfigurationField `json:"fields"`
+}
+
+type ConfigurationResponse struct {
+	FieldValues []string `json:"fieldValues"`
+}
+
+func (gqc *ChatPlugClient) AwaitConfiguration(configurationSchema []ConfigurationField) *ConfigurationResponse {
+	variables := make(map[string]interface{})
+	variables["fields"] = configurationSchema
+	channel := make(chan *ConfigurationResponse)
+
+	subscriptionChan, _ := gqc.session.Subscribe(requestConfigurationRequest, variables)
+	go func() {
+		Loop:
+		for {
+		for subscription := range subscriptionChan {
+			if (subscription.Type == "data") {
+				var cfg configurationReceivedPayload
+				json.Unmarshal(*subscription.Payload, &cfg)
+				channel <- &cfg.Data.ConfigurationReceived
+				break Loop
+			}
+			}
+		}
+	}()
+	res := <- channel
+	return res
 }
 
 // Request sends a graphql requests to the core server and returns a pointer to map with result
