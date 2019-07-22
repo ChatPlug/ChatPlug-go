@@ -1,7 +1,6 @@
 package core
 
 import (
-	"os"
 	"os/exec"
 )
 
@@ -34,10 +33,5 @@ func (bsh *BaseServiceHandler) RunInstance(command *exec.Cmd, instanceID string)
 	command.Args = append(command.Args, instanceID)
 	bsh.ServiceProcesses[instanceID] = command
 
-	command.Stdout = os.Stdout
-	command.Stdin = os.Stdin
-
-	go func() {
-		command.Run()
-	}()
+	RunCommand(command, bsh.Service.Name)
 }

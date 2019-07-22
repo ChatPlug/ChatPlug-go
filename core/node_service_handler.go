@@ -32,9 +32,9 @@ func (nsh *NodeServiceHandler) Init() error {
 		return fmt.Errorf("Service %s needs installing dependencies, but NPM was not found", serviceName)
 	}
 
-	err := exec.Command("npm", "install")
-
-	if err != nil {
+	cmd := exec.Command("npm", "install")
+	cmd.Dir = nsh.GetPath()
+	if err := RunCommand(cmd, nsh.Service.Name+": npm"); err != nil {
 		return fmt.Errorf("Installing dependencies for service %s failed: %s", serviceName, err)
 	}
 
