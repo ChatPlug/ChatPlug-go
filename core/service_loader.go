@@ -20,6 +20,8 @@ func (sl *ServiceLoader) CreateServiceHandler(service *Service) ServiceHandler {
 	switch service.Type {
 	case "node":
 		handler = &NodeServiceHandler{BaseServiceHandler: baseHandler}
+	case "python3":
+		handler = &Python3ServiceHandler{BaseServiceHandler: baseHandler}
 	case "executable":
 		handler = &ExecutableServiceHandler{BaseServiceHandler: baseHandler}
 	default:
