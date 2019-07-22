@@ -37,7 +37,7 @@ const (
 	completeMsg            = "complete"             // Server -> Client
 	connectionKeepAliveMsg = "ka"                 // Server -> Client
 	sendMessageMutation = `
-	mutation sendMessage($instanceId: ID!, $body: String!, $originId: String!, $originThreadId: String!, $username: String!, $authorOriginId: String!, $authorAvatarUrl: String!, $attachments: AttachmentInput!) {
+	mutation sendMessage($instanceId: ID!, $body: String!, $originId: String!, $originThreadId: String!, $username: String!, $authorOriginId: String!, $authorAvatarUrl: String!, $attachments: [AttachmentInput!]!) {
 		sendMessage(
 		  instanceId: $instanceId,
 		  input: {
@@ -101,13 +101,14 @@ const (
 
 // MessageAuthor holds information about single message's atuhor
 type MessageAuthor struct {
-	ID string `json: id"`
+	ID string `json: "id"`
 	Username string    `json:"username"`
 	OriginID string    `json:"originId"`
+	AvatarURL string `json:"avatarUrl"`
 }
 
 type AttachmentInput struct {
-	OriginID string `json: originId"`
+	OriginID string `json:"originId"`
 	Type string    `json:"type"`
 	SourceURL string    `json:"sourceUrl"`
 }
@@ -228,7 +229,7 @@ func (s *session) Subscribe(query string, variables map[string]interface{}) (<-c
 			if err != nil {
 				s.errChan <- err
 			}
-			kok, _ := json.MarshalIndent(&msg, "", "    ")
+			// kok, _ := json.MarshalIndent(&msg, "", "    ")
 			// fmt.Printf("%s\n", kok)
 
 			if (msg.Type == "error") {
@@ -272,7 +273,7 @@ func (gqc *ChatPlugClient) Close() {
 }
 
 // SendMessage sends a message with given data to core server via graphql
-func (gqc *ChatPlugClient) SendMessage(body string, originId string, originThreadId string, username string, authorOriginId string, authorAvatarUrl string, attachments []AttachmentInput) {
+func (gqc *ChatPlugClient) SendMessage(body string, originId string, originThreadId string, username string, authorOriginId string, authorAvatarUrl string, attachments []*AttachmentInput) {
 	req := graphql.NewRequest(sendMessageMutation)
 	req.Var("instanceId", gqc.instanceID)
 	req.Var("body", body)
@@ -282,7 +283,13 @@ func (gqc *ChatPlugClient) SendMessage(body string, originId string, originThrea
 	req.Var("authorOriginId", authorOriginId)
 	req.Var("authorAvatarUrl", authorAvatarUrl)
 	req.Var("attachments", attachments)
-	gqc.Request(req)
+
+	fmt.Println("Sending sendMessage mutation to the core")
+	_, err := gqc.Request(req)
+	if err != nil {
+		fmt.Println("boop")
+		fmt.Println(err)
+	}
 }
 
 // SubscribeToNewMessages starts a subscription to core server's messages and returns a chan with parsed data

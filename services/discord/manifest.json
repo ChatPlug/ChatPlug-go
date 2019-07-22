@@ -3,6 +3,6 @@
     "displayName": "Discord service",
     "description": "A discord service",
     "entrypoint": "discord",
-    "type": "node",
+    "type": "executable",
     "version": "0.0.0"
 }

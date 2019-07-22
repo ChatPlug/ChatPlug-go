@@ -95,6 +95,11 @@ func (r *mutationResolver) DeleteThreadGroup(ctx context.Context, id string) (st
 	return id, nil
 }
 
+func (r *mutationResolver) DeleteServiceInstance(ctx context.Context, id string) (string, error) {
+	r.App.db.Where("id = ?", id).Delete(&ServiceInstance{})
+	return id, nil
+}
+
 func (r *mutationResolver) DeleteThread(ctx context.Context, id string) (string, error) {
 	r.App.db.Where("id = ?", id).Delete(&Thread{})
 	return id, nil

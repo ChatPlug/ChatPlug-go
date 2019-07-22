@@ -132,6 +132,7 @@ type Mutation {
     sendMessage(instanceId: ID!, input: MessageInput!): Message!
     createThreadGroup(name: String!): ThreadGroup!
     deleteThreadGroup(id: ID!): ID!
+    deleteServiceInstance(id: ID!): ID!
     deleteThread(id: ID!): ID!
     addThreadToGroup(input: ThreadInput): ThreadGroup!
     setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!

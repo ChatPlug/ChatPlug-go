@@ -134,6 +134,7 @@ type InstanceStatus string
 const (
 	InstanceStatusRunning      InstanceStatus = "RUNNING"
 	InstanceStatusInitialized  InstanceStatus = "INITIALIZED"
+	InstanceStatusConfigured   InstanceStatus = "CONFIGURED"
 	InstanceStatusShuttingDown InstanceStatus = "SHUTTING_DOWN"
 	InstanceStatusStopped      InstanceStatus = "STOPPED"
 )
@@ -141,13 +142,14 @@ const (
 var AllInstanceStatus = []InstanceStatus{
 	InstanceStatusRunning,
 	InstanceStatusInitialized,
+	InstanceStatusConfigured,
 	InstanceStatusShuttingDown,
 	InstanceStatusStopped,
 }
 
 func (e InstanceStatus) IsValid() bool {
 	switch e {
-	case InstanceStatusRunning, InstanceStatusInitialized, InstanceStatusShuttingDown, InstanceStatusStopped:
+	case InstanceStatusRunning, InstanceStatusInitialized, InstanceStatusConfigured, InstanceStatusShuttingDown, InstanceStatusStopped:
 		return true
 	}
 	return false
