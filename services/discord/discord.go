@@ -22,7 +22,6 @@ type DiscordServiceConfiguration struct {
 
 func (ds *DiscordService) Startup(args []string) {
 	ds.client = &ChatPlugClient{}
-	fmt.Println("serviceID: " + args[1])
 	ds.client.Connect(args[1], "http://localhost:2137/query", "ws://localhost:2137/query")
 
 	if !ds.IsConfigured() {
@@ -36,7 +35,6 @@ func (ds *DiscordService) Startup(args []string) {
 		log.Fatal(err)
 	}
 
-	fmt.Println("doopa22: " + serviceConfiguration.BotToken)
 	ds.discordClient, err = discordgo.New("Bot " + serviceConfiguration.BotToken)
 	ds.discordClient.AddHandler(ds.discordMessageCreate)
 
@@ -71,12 +69,11 @@ func (ds *DiscordService) Startup(args []string) {
 		ds.discordClient.WebhookExecute(webhook.ID, webhook.Token, true, data)
 
 		for _, attachment := range msg.Message.Attachments {
-			fmt.Printf("doopsko haha yes %s\n", attachment.SourceURL)
 
 			data := &discordgo.WebhookParams{
 				Username:  msg.Message.Author.Username,
 				AvatarURL: msg.Message.Author.AvatarURL,
-				// File:      "https://i.imgur.com/ZGPxFN2.jpg",
+				File:      attachment.SourceURL,
 			}
 
 			// url := fmt.Sprintf("https://discordapp.com/webhooks/%s/%s", webhook.ID, webhook.Token)
@@ -111,12 +108,8 @@ func (ds *DiscordService) discordMessageCreate(s *discordgo.Session, m *discordg
 			SourceURL: discordAttachment.URL,
 		}
 
-		fmt.Println("ATTACHMENT! " + attachment.OriginID + " hoho " + attachment.SourceURL)
 		attachments = append(attachments, &attachment)
 	}
-	fmt.Printf("New message from %s in channel %s: %s\n", m.Author.Username, m.ChannelID, m.Content)
-	fmt.Printf("mid: %s, uid: %s, avatar: %s\n", m.ID, m.Author.ID, m.Author.AvatarURL("medium"))
-	fmt.Println("---")
 
 	ds.client.SendMessage(
 		m.Content,
