@@ -1,7 +1,9 @@
 package core
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 type ServiceHandler interface {
@@ -21,7 +23,7 @@ func (bsh *BaseServiceHandler) GetPath() string {
 }
 
 func (bsh *BaseServiceHandler) GetEntrypointPath() string {
-	return bsh.GetPath() + bsh.Service.EntryPoint
+	return bsh.Service.EntryPoint
 }
 
 func commandExists(cmd string) bool {
@@ -31,6 +33,12 @@ func commandExists(cmd string) bool {
 
 func (bsh *BaseServiceHandler) RunInstance(command *exec.Cmd, instanceID string) {
 	command.Args = append(command.Args, instanceID)
+	command.Dir = filepath.FromSlash("services/" + bsh.Service.Name)
+	command.Env = os.Environ()
+	command.Env = append(command.Env, "WS_ENDPOINT=ws://localhost:2137/query")
+	command.Env = append(command.Env, "HTTP_ENDPOINT=http://localhost:2137/query")
+	command.Env = append(command.Env, "INSTANCE_ID="+instanceID)
+
 	bsh.ServiceProcesses[instanceID] = command
 
 	RunCommand(command, bsh.Service.Name)
