@@ -27,7 +27,9 @@ func RunCommand(command *exec.Cmd, prefix string) error {
 
 	cout <- struct{}{}
 	cerr <- struct{}{}
-	command.Start()
+	if err := command.Start(); err != nil {
+		return err
+	}
 
 	<-cout
 	<-cerr
@@ -35,7 +37,6 @@ func RunCommand(command *exec.Cmd, prefix string) error {
 		return err
 	}
 
-	command.Start()
 	return nil
 }
 
