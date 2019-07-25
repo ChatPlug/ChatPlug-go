@@ -58,6 +58,7 @@ type ThreadGroup struct {
 
 type Thread struct {
 	Base
+	Readonly          *bool     `json:"readonly"`
 	Name              string    `json:"name"`
 	OriginID          string    `json:"originId"`
 	Messages          []Message `json:"messages"`

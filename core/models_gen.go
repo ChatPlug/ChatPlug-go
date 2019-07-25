@@ -38,6 +38,7 @@ type ThreadInput struct {
 	InstanceID string `json:"instanceId"`
 	OriginID   string `json:"originId"`
 	GroupID    string `json:"groupId"`
+	Readonly   *bool  `json:"readonly"`
 	Name       string `json:"name"`
 }
 

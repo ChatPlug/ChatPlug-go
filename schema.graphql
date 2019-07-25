@@ -4,6 +4,7 @@ type Thread {
     messages: [Message!]!
     threadGroupId: ID!
     serviceInstanceId: ID!
+    readonly: Boolean
     id: ID!
 }
 
@@ -95,6 +96,7 @@ input ThreadInput {
     instanceId: String!
     originId: String!
     groupId: ID!
+    readonly: Boolean
     name: String!
 }
 

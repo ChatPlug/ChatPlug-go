@@ -65,6 +65,9 @@ func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, i
 			r.App.db.Model(&group).Association("Messages").Append(msg)
 
 			for _, thread := range group.Threads {
+				if thread.Readonly != nil && *thread.Readonly == true {
+					continue
+				}
 				if msg.ThreadID != thread.ID {
 					r.App.sm.FindEventBoardcasterByInstanceID(thread.ServiceInstanceID).Broadcast(&MessagePayload{
 						TargetThreadID: thread.OriginID,
@@ -114,6 +117,7 @@ func (r *mutationResolver) AddThreadToGroup(ctx context.Context, input *ThreadIn
 		OriginID:          input.OriginID,
 		Name:              input.Name,
 		ServiceInstanceID: input.InstanceID,
+		Readonly:          input.Readonly,
 	})
 
 	return &group, nil

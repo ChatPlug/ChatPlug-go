@@ -118,6 +118,7 @@ type ComplexityRoot struct {
 		Messages          func(childComplexity int) int
 		Name              func(childComplexity int) int
 		OriginID          func(childComplexity int) int
+		Readonly          func(childComplexity int) int
 		ServiceInstanceID func(childComplexity int) int
 		ThreadGroupID     func(childComplexity int) int
 	}
@@ -514,6 +515,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Thread.OriginID(childComplexity), true
 
+	case "Thread.readonly":
+		if e.complexity.Thread.Readonly == nil {
+			break
+		}
+
+		return e.complexity.Thread.Readonly(childComplexity), true
+
 	case "Thread.serviceInstanceId":
 		if e.complexity.Thread.ServiceInstanceID == nil {
 			break
@@ -653,6 +661,7 @@ var parsedSchema = gqlparser.MustLoadSchema(
     messages: [Message!]!
     threadGroupId: ID!
     serviceInstanceId: ID!
+    readonly: Boolean
     id: ID!
 }
 
@@ -744,6 +753,7 @@ input ThreadInput {
     instanceId: String!
     originId: String!
     groupId: ID!
+    readonly: Boolean
     name: String!
 }
 
@@ -2731,6 +2741,40 @@ func (ec *executionContext) _Thread_serviceInstanceId(ctx context.Context, field
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Thread_readonly(ctx context.Context, field graphql.CollectedField, obj *Thread) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Thread",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Readonly, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Thread_id(ctx context.Context, field graphql.CollectedField, obj *Thread) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -4259,6 +4303,12 @@ func (ec *executionContext) unmarshalInputThreadInput(ctx context.Context, obj i
 			if err != nil {
 				return it, err
 			}
+		case "readonly":
+			var err error
+			it.Readonly, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "name":
 			var err error
 			it.Name, err = ec.unmarshalNString2string(ctx, v)
@@ -4781,6 +4831,8 @@ func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, o
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "readonly":
+			out.Values[i] = ec._Thread_readonly(ctx, field, obj)
 		case "id":
 			out.Values[i] = ec._Thread_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
