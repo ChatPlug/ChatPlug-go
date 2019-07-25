@@ -45,8 +45,8 @@ func start() {
 }
 
 func install() {
-	err := core.InstallService()
-	if err != nil {
-		fmt.Printf("Error installing service: %s\n", err)
-	}
+	//err := core.InstallService()
+	//if err != nil {
+	//	fmt.Printf("Error installing service: %s\n", err)
+	//}
 }
