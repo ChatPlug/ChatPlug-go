@@ -56,13 +56,21 @@ func (sl *ServiceLoader) StartupAllInstances() {
 	}
 }
 
-func (sl *ServiceLoader) StartupInstance(instanceID string) {
+func (sl *ServiceLoader) GetHandlerForInstance(instanceID string) ServiceHandler {
 	var instance ServiceInstance
 	sl.App.db.Where("id = ?", instanceID).First(&instance)
 
 	service := sl.App.sm.FindServiceWithName(instance.ModuleName)
+	if service == nil {
+		log.Printf("Service %s not found!", instance.ModuleName)
+		return nil
+	}
 	sl.App.sm.LoadInstance(instance.ID)
-	sl.GetHandlerForService(service).LoadService(instanceID)
+	return sl.GetHandlerForService(service)
+}
+
+func (sl *ServiceLoader) StartupInstance(instanceID string) {
+	sl.GetHandlerForInstance(instanceID).LoadService(instanceID)
 }
 
 func (sl *ServiceLoader) ShutdownAllInstances() {

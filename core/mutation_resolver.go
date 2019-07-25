@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"log"
 )
 
@@ -13,11 +12,6 @@ func (r *Resolver) Mutation() MutationResolver {
 type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, input MessageInput) (*Message, error) {
-	fmt.Println("Got there")
-	fmt.Println(input.Body)
-	fmt.Println(input.OriginID)
-	fmt.Println(input.OriginThreadID)
-
 	var groups []ThreadGroup
 	var lastSentMsg *Message
 	r.App.db.Preload("Threads").Find(&groups)
@@ -129,11 +123,16 @@ func (r *mutationResolver) SetInstanceStatus(ctx context.Context, instanceID str
 	var instance ServiceInstance
 
 	r.App.db.First(&instance, "id = ?", instanceID)
-	r.App.db.Model(&instance).Update("Status", status.String())
 
-	if status.String() == "RUNNING" && instance.Status != "RUNNING" {
+	log.Printf("Instance %s status changed: %s -> %s", instanceID, instance.Status, status.String())
+	if instance.Status == "STOPPED" && status.String() == "RUNNING" {
 		r.App.sl.StartupInstance(instanceID)
 	}
+	if instance.Status == "RUNNING" && status.String() == "STOPPED" {
+		r.App.sl.GetHandlerForInstance(instanceID).ShutdownService(instanceID)
+	}
+
+	r.App.db.Model(&instance).Update("Status", status.String())
 
 	return &instance, nil
 }
