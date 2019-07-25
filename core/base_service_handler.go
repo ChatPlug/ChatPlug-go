@@ -1,10 +1,10 @@
 package core
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"path"
 )
 
 type ServiceHandler interface {
@@ -34,17 +34,20 @@ func commandExists(cmd string) bool {
 
 func (bsh *BaseServiceHandler) RunInstance(command *exec.Cmd, instanceID string) {
 	command.Args = append(command.Args, instanceID)
-	command.Dir = filepath.FromSlash("services/" + bsh.Service.Name)
+	command.Dir = path.Join("services", bsh.Service.Name)
 	command.Env = os.Environ()
-	command.Env = append(command.Env, "WS_ENDPOINT=ws://localhost:2137/query")
-	command.Env = append(command.Env, "HTTP_ENDPOINT=http://localhost:2137/query")
-	command.Env = append(command.Env, "INSTANCE_ID="+instanceID)
+	command.Env = append(command.Env,
+		"WS_ENDPOINT=ws://localhost:2137/query",
+		"HTTP_ENDPOINT=http://localhost:2137/query",
+		"INSTANCE_ID="+instanceID)
 
 	bsh.ServiceProcesses[instanceID] = command
-	fmt.Println(command.Path)
-	fmt.Println(command.Dir)
 
+	log.Printf("Launching service %s...", bsh.Service.Name)
 	go func() {
-		RunCommand(command, bsh.Service.Name)
+		err := RunCommand(command, bsh.Service.Name)
+		if err != nil {
+			log.Println(err)
+		}
 	}()
 }
