@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,6 +41,10 @@ func (bsh *BaseServiceHandler) RunInstance(command *exec.Cmd, instanceID string)
 	command.Env = append(command.Env, "INSTANCE_ID="+instanceID)
 
 	bsh.ServiceProcesses[instanceID] = command
+	fmt.Println(command.Path)
+	fmt.Println(command.Dir)
 
-	RunCommand(command, bsh.Service.Name)
+	go func() {
+		RunCommand(command, bsh.Service.Name)
+	}()
 }

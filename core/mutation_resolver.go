@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"log"
 )
 
@@ -12,6 +13,11 @@ func (r *Resolver) Mutation() MutationResolver {
 type mutationResolver struct{ *Resolver }
 
 func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, input MessageInput) (*Message, error) {
+	fmt.Println("Got there")
+	fmt.Println(input.Body)
+	fmt.Println(input.OriginID)
+	fmt.Println(input.OriginThreadID)
+
 	var groups []ThreadGroup
 	var lastSentMsg *Message
 	r.App.db.Preload("Threads").Find(&groups)
