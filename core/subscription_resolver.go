@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"log"
 )
 
@@ -13,7 +12,7 @@ func (r *Resolver) Subscription() SubscriptionResolver {
 type subscriptionResolver struct{ *Resolver }
 
 func (r *subscriptionResolver) MessageReceived(ctx context.Context, instanceID string) (<-chan *MessagePayload, error) {
-	fmt.Println(instanceID)
+	//fmt.Println(instanceID)
 	eventBroadcaster := r.App.sm.FindEventBoardcasterByInstanceID(instanceID)
 
 	messages := make(chan *MessagePayload, 1)
