@@ -14,7 +14,7 @@ func (esh *ExecutableServiceHandler) Init() error {
 }
 
 func (esh *ExecutableServiceHandler) LoadService(instanceID string) {
-	esh.RunInstance(exec.Command(esh.GetEntrypointPath()), instanceID)
+	esh.RunInstance(exec.Command("./"+esh.GetEntrypointPath()), instanceID)
 }
 
 func (esh *ExecutableServiceHandler) ShutdownService(instanceID string) {
