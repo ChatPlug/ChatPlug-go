@@ -3,7 +3,7 @@ type Thread {
     originId: String!
     messages: [Message!]!
     threadGroupId: ID!
-    serviceInstanceId: ID!
+    service: ServiceInstance!
     readonly: Boolean
     id: ID!
 }

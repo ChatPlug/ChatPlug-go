@@ -39,6 +39,7 @@ type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
+	Thread() ThreadResolver
 }
 
 type DirectiveRoot struct {
@@ -114,13 +115,13 @@ type ComplexityRoot struct {
 	}
 
 	Thread struct {
-		ID                func(childComplexity int) int
-		Messages          func(childComplexity int) int
-		Name              func(childComplexity int) int
-		OriginID          func(childComplexity int) int
-		Readonly          func(childComplexity int) int
-		ServiceInstanceID func(childComplexity int) int
-		ThreadGroupID     func(childComplexity int) int
+		ID            func(childComplexity int) int
+		Messages      func(childComplexity int) int
+		Name          func(childComplexity int) int
+		OriginID      func(childComplexity int) int
+		Readonly      func(childComplexity int) int
+		Service       func(childComplexity int) int
+		ThreadGroupID func(childComplexity int) int
 	}
 
 	ThreadGroup struct {
@@ -154,6 +155,9 @@ type QueryResolver interface {
 type SubscriptionResolver interface {
 	MessageReceived(ctx context.Context, instanceID string) (<-chan *MessagePayload, error)
 	ConfigurationReceived(ctx context.Context, configuration ConfigurationRequest) (<-chan *ConfigurationResponse, error)
+}
+type ThreadResolver interface {
+	Service(ctx context.Context, obj *Thread) (*ServiceInstance, error)
 }
 
 type executableSchema struct {
@@ -522,12 +526,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Thread.Readonly(childComplexity), true
 
-	case "Thread.serviceInstanceId":
-		if e.complexity.Thread.ServiceInstanceID == nil {
+	case "Thread.service":
+		if e.complexity.Thread.Service == nil {
 			break
 		}
 
-		return e.complexity.Thread.ServiceInstanceID(childComplexity), true
+		return e.complexity.Thread.Service(childComplexity), true
 
 	case "Thread.threadGroupId":
 		if e.complexity.Thread.ThreadGroupID == nil {
@@ -660,7 +664,7 @@ var parsedSchema = gqlparser.MustLoadSchema(
     originId: String!
     messages: [Message!]!
     threadGroupId: ID!
-    serviceInstanceId: ID!
+    service: ServiceInstance!
     readonly: Boolean
     id: ID!
 }
@@ -2704,7 +2708,7 @@ func (ec *executionContext) _Thread_threadGroupId(ctx context.Context, field gra
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_serviceInstanceId(ctx context.Context, field graphql.CollectedField, obj *Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_service(ctx context.Context, field graphql.CollectedField, obj *Thread) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -2717,13 +2721,13 @@ func (ec *executionContext) _Thread_serviceInstanceId(ctx context.Context, field
 		Object:   "Thread",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ServiceInstanceID, nil
+		return ec.resolvers.Thread().Service(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2735,10 +2739,10 @@ func (ec *executionContext) _Thread_serviceInstanceId(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*ServiceInstance)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNServiceInstance2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐServiceInstance(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Thread_readonly(ctx context.Context, field graphql.CollectedField, obj *Thread) (ret graphql.Marshaler) {
@@ -4809,34 +4813,43 @@ func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, o
 		case "name":
 			out.Values[i] = ec._Thread_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "originId":
 			out.Values[i] = ec._Thread_originId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "messages":
 			out.Values[i] = ec._Thread_messages(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "threadGroupId":
 			out.Values[i] = ec._Thread_threadGroupId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
-		case "serviceInstanceId":
-			out.Values[i] = ec._Thread_serviceInstanceId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+		case "service":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Thread_service(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "readonly":
 			out.Values[i] = ec._Thread_readonly(ctx, field, obj)
 		case "id":
 			out.Values[i] = ec._Thread_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
