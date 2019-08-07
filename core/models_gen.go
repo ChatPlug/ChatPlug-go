@@ -34,6 +34,15 @@ type MessagePayload struct {
 	Message        *Message `json:"message"`
 }
 
+type NewServiceInstanceCreated struct {
+	Instance    *ServiceInstance `json:"instance"`
+	AccessToken string           `json:"accessToken"`
+}
+
+type SearchRequest struct {
+	Query string `json:"query"`
+}
+
 type ThreadInput struct {
 	InstanceID string `json:"instanceId"`
 	OriginID   string `json:"originId"`

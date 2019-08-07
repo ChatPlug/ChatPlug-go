@@ -2,16 +2,24 @@ package core
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
 	"log"
 )
 
+// Mutation resolver handles all graphql mutations
 func (r *Resolver) Mutation() MutationResolver {
 	return &mutationResolver{r}
 }
 
 type mutationResolver struct{ *Resolver }
 
-func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, input MessageInput) (*Message, error) {
+func (r *mutationResolver) SendMessage(ctx context.Context, input MessageInput) (*Message, error) {
+	instance := r.App.InstanceForContext(ctx)
+	if instance == nil {
+		return &Message{}, fmt.Errorf("Access denied")
+	}
+
 	var groups []ThreadGroup
 	var lastSentMsg *Message
 	r.App.db.Preload("Threads").Find(&groups)
@@ -21,7 +29,7 @@ func (r *mutationResolver) SendMessage(ctx context.Context, instanceID string, i
 		var rightThreadID string
 		for _, thread := range group.Threads {
 
-			if thread.ServiceInstanceID == instanceID && thread.OriginID == input.OriginThreadID {
+			if thread.ServiceInstanceID == instance.ID && thread.OriginID == input.OriginThreadID {
 				rightGroup = true
 				rightThreadID = thread.ID
 			}
@@ -123,31 +131,45 @@ func (r *mutationResolver) AddThreadToGroup(ctx context.Context, input *ThreadIn
 	return &group, nil
 }
 
-func (r *mutationResolver) SetInstanceStatus(ctx context.Context, instanceID string, status *InstanceStatus) (*ServiceInstance, error) {
-	var instance ServiceInstance
+func (r *mutationResolver) SetInstanceStatus(ctx context.Context, status *InstanceStatus) (*ServiceInstance, error) {
+	instance := r.App.InstanceForContext(ctx)
+	if instance == nil {
+		return &ServiceInstance{}, fmt.Errorf("Access denied")
+	}
 
-	r.App.db.First(&instance, "id = ?", instanceID)
-
-	log.Printf("Instance %s status changed: %s -> %s", instanceID, instance.Status, status.String())
+	log.Printf("Instance %s status changed: %s -> %s", instance.ID, instance.Status, status.String())
 	if instance.Status == "STOPPED" && status.String() == "RUNNING" {
-		r.App.sl.StartupInstance(instanceID)
+		r.App.sl.StartupInstance(instance.ID)
 	}
 	if instance.Status == "RUNNING" && status.String() == "STOPPED" {
-		r.App.sl.GetHandlerForInstance(instanceID).ShutdownService(instanceID)
+		r.App.sl.GetHandlerForInstance(instance.ID).ShutdownService(instance.ID)
 	}
 
 	r.App.db.Model(&instance).Update("Status", status.String())
 
-	return &instance, nil
+	return instance, nil
 }
 
-func (r *mutationResolver) CreateNewInstance(ctx context.Context, serviceModuleName string, instanceName string) (*ServiceInstance, error) {
+func (r *mutationResolver) CreateNewInstance(ctx context.Context, serviceModuleName string, instanceName string) (*NewServiceInstanceCreated, error) {
+	token := GenerateAccessToken()
 	newInstance := &ServiceInstance{
-		Name:       instanceName,
-		ModuleName: serviceModuleName,
-		Threads:    []Thread{},
+		Name:        instanceName,
+		ModuleName:  serviceModuleName,
+		Threads:     []Thread{},
+		AccessToken: token,
 	}
 
 	r.App.db.Create(newInstance)
-	return newInstance, nil
+	res := &NewServiceInstanceCreated{
+		Instance:    newInstance,
+		AccessToken: token,
+	}
+	return res, nil
+}
+
+// GenerateAccessToken generates a random token used to authenticate services
+func GenerateAccessToken() string {
+	b := make([]byte, 4)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
 }

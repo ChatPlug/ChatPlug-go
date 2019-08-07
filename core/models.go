@@ -30,6 +30,7 @@ func (base *Base) BeforeCreate(scope *gorm.Scope) error {
 	return scope.SetColumn("ID", uuid)
 }
 
+// Message stores all information of single message handled by chatplug
 type Message struct {
 	Base
 	OriginID        string       `json:"originId"`
@@ -41,6 +42,7 @@ type Message struct {
 	Attachments     []Attachment `json:"attachments"`
 }
 
+// Attachment stores data about a attachments contained in single message
 type Attachment struct {
 	Base
 	OriginID  string         `json:"originId"`
@@ -49,6 +51,7 @@ type Attachment struct {
 	MessageID string
 }
 
+// ThreadGroup holds data about a group containing many Threads
 type ThreadGroup struct {
 	Base
 	Name     string    `json:"name"`
@@ -56,6 +59,7 @@ type ThreadGroup struct {
 	Threads  []Thread  `json:"threads"`
 }
 
+// Thread holds a data about single thread from a single ServiceInstance
 type Thread struct {
 	Base
 	Readonly          *bool     `json:"readonly"`
@@ -66,6 +70,7 @@ type Thread struct {
 	ServiceInstanceID string    `json:"serviceInstanceId"`
 }
 
+// ConfigurationField holds data about one field in config
 type ConfigurationField struct {
 	Type         ConfigurationFieldType `json:"type"`
 	DefaultValue string                 `json:"defaultValue"`
@@ -74,15 +79,19 @@ type ConfigurationField struct {
 	Mask         bool                   `json:"mask"`
 }
 
+// ConfigurationRequest holds all the requested config fields and keeps a
+// result chan that returns a configured response
 type ConfigurationRequest struct {
 	Fields  []ConfigurationField `json:"fields"`
 	resChan chan *ConfigurationResponse
 }
 
+// ConfigurationResponse holds a completed config info
 type ConfigurationResponse struct {
 	FieldValues []string `json:"fieldValues"`
 }
 
+// Service holds info about a single service. Can be initialized with many instances via ServiceInstance
 type Service struct {
 	Base
 	Name        string `json:"name"`
@@ -93,14 +102,17 @@ type Service struct {
 	EntryPoint  string `json:"entrypoint"`
 }
 
+// ServiceInstance holds info about a single running instance of a Service
 type ServiceInstance struct {
 	Base
-	Name       string         `json:"name"`
-	ModuleName string         `json:"moduleName"`
-	Threads    []Thread       `json:"threads"`
-	Status     InstanceStatus `json:"status"`
+	Name        string         `json:"name"`
+	AccessToken string         `json:"-"`
+	ModuleName  string         `json:"moduleName"`
+	Threads     []Thread       `json:"threads"`
+	Status      InstanceStatus `json:"status"`
 }
 
+// MessageAuthor holds data about a single user in single ServiceInstance
 type MessageAuthor struct {
 	Base
 	Username  string    `json:"username"`

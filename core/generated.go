@@ -38,6 +38,7 @@ type ResolverRoot interface {
 	Message() MessageResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
+	ServiceInstance() ServiceInstanceResolver
 	Subscription() SubscriptionResolver
 	Thread() ThreadResolver
 }
@@ -86,8 +87,13 @@ type ComplexityRoot struct {
 		DeleteServiceInstance func(childComplexity int, id string) int
 		DeleteThread          func(childComplexity int, id string) int
 		DeleteThreadGroup     func(childComplexity int, id string) int
-		SendMessage           func(childComplexity int, instanceID string, input MessageInput) int
-		SetInstanceStatus     func(childComplexity int, instanceID string, status *InstanceStatus) int
+		SendMessage           func(childComplexity int, input MessageInput) int
+		SetInstanceStatus     func(childComplexity int, status *InstanceStatus) int
+	}
+
+	NewServiceInstanceCreated struct {
+		AccessToken func(childComplexity int) int
+		Instance    func(childComplexity int) int
 	}
 
 	Query struct {
@@ -97,21 +103,29 @@ type ComplexityRoot struct {
 		ThreadGroups func(childComplexity int) int
 	}
 
+	SearchRequest struct {
+		Query func(childComplexity int) int
+	}
+
 	Service struct {
 		Description func(childComplexity int) int
 		DisplayName func(childComplexity int) int
+		EntryPoint  func(childComplexity int) int
 		Name        func(childComplexity int) int
+		Type        func(childComplexity int) int
+		Version     func(childComplexity int) int
 	}
 
 	ServiceInstance struct {
-		ID     func(childComplexity int) int
-		Name   func(childComplexity int) int
-		Status func(childComplexity int) int
+		ID      func(childComplexity int) int
+		Name    func(childComplexity int) int
+		Service func(childComplexity int) int
+		Status  func(childComplexity int) int
 	}
 
 	Subscription struct {
 		ConfigurationReceived func(childComplexity int, configuration ConfigurationRequest) int
-		MessageReceived       func(childComplexity int, instanceID string) int
+		MessageReceived       func(childComplexity int) int
 	}
 
 	Thread struct {
@@ -137,14 +151,14 @@ type MessageResolver interface {
 	Thread(ctx context.Context, obj *Message) (*Thread, error)
 }
 type MutationResolver interface {
-	SendMessage(ctx context.Context, instanceID string, input MessageInput) (*Message, error)
+	SendMessage(ctx context.Context, input MessageInput) (*Message, error)
 	CreateThreadGroup(ctx context.Context, name string) (*ThreadGroup, error)
 	DeleteThreadGroup(ctx context.Context, id string) (string, error)
 	DeleteServiceInstance(ctx context.Context, id string) (string, error)
 	DeleteThread(ctx context.Context, id string) (string, error)
 	AddThreadToGroup(ctx context.Context, input *ThreadInput) (*ThreadGroup, error)
-	SetInstanceStatus(ctx context.Context, instanceID string, status *InstanceStatus) (*ServiceInstance, error)
-	CreateNewInstance(ctx context.Context, serviceModuleName string, instanceName string) (*ServiceInstance, error)
+	SetInstanceStatus(ctx context.Context, status *InstanceStatus) (*ServiceInstance, error)
+	CreateNewInstance(ctx context.Context, serviceModuleName string, instanceName string) (*NewServiceInstanceCreated, error)
 }
 type QueryResolver interface {
 	Messages(ctx context.Context) ([]*Message, error)
@@ -152,8 +166,11 @@ type QueryResolver interface {
 	Services(ctx context.Context) ([]*Service, error)
 	ThreadGroups(ctx context.Context) ([]*ThreadGroup, error)
 }
+type ServiceInstanceResolver interface {
+	Service(ctx context.Context, obj *ServiceInstance) (*Service, error)
+}
 type SubscriptionResolver interface {
-	MessageReceived(ctx context.Context, instanceID string) (<-chan *MessagePayload, error)
+	MessageReceived(ctx context.Context) (<-chan *MessagePayload, error)
 	ConfigurationReceived(ctx context.Context, configuration ConfigurationRequest) (<-chan *ConfigurationResponse, error)
 }
 type ThreadResolver interface {
@@ -383,7 +400,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SendMessage(childComplexity, args["instanceId"].(string), args["input"].(MessageInput)), true
+		return e.complexity.Mutation.SendMessage(childComplexity, args["input"].(MessageInput)), true
 
 	case "Mutation.setInstanceStatus":
 		if e.complexity.Mutation.SetInstanceStatus == nil {
@@ -395,7 +412,21 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetInstanceStatus(childComplexity, args["instanceId"].(string), args["status"].(*InstanceStatus)), true
+		return e.complexity.Mutation.SetInstanceStatus(childComplexity, args["status"].(*InstanceStatus)), true
+
+	case "NewServiceInstanceCreated.accessToken":
+		if e.complexity.NewServiceInstanceCreated.AccessToken == nil {
+			break
+		}
+
+		return e.complexity.NewServiceInstanceCreated.AccessToken(childComplexity), true
+
+	case "NewServiceInstanceCreated.instance":
+		if e.complexity.NewServiceInstanceCreated.Instance == nil {
+			break
+		}
+
+		return e.complexity.NewServiceInstanceCreated.Instance(childComplexity), true
 
 	case "Query.instances":
 		if e.complexity.Query.Instances == nil {
@@ -425,6 +456,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.ThreadGroups(childComplexity), true
 
+	case "SearchRequest.query":
+		if e.complexity.SearchRequest.Query == nil {
+			break
+		}
+
+		return e.complexity.SearchRequest.Query(childComplexity), true
+
 	case "Service.description":
 		if e.complexity.Service.Description == nil {
 			break
@@ -439,12 +477,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Service.DisplayName(childComplexity), true
 
+	case "Service.entryPoint":
+		if e.complexity.Service.EntryPoint == nil {
+			break
+		}
+
+		return e.complexity.Service.EntryPoint(childComplexity), true
+
 	case "Service.name":
 		if e.complexity.Service.Name == nil {
 			break
 		}
 
 		return e.complexity.Service.Name(childComplexity), true
+
+	case "Service.type":
+		if e.complexity.Service.Type == nil {
+			break
+		}
+
+		return e.complexity.Service.Type(childComplexity), true
+
+	case "Service.version":
+		if e.complexity.Service.Version == nil {
+			break
+		}
+
+		return e.complexity.Service.Version(childComplexity), true
 
 	case "ServiceInstance.id":
 		if e.complexity.ServiceInstance.ID == nil {
@@ -459,6 +518,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ServiceInstance.Name(childComplexity), true
+
+	case "ServiceInstance.service":
+		if e.complexity.ServiceInstance.Service == nil {
+			break
+		}
+
+		return e.complexity.ServiceInstance.Service(childComplexity), true
 
 	case "ServiceInstance.status":
 		if e.complexity.ServiceInstance.Status == nil {
@@ -484,12 +550,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Subscription_messageReceived_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Subscription.MessageReceived(childComplexity, args["instanceId"].(string)), true
+		return e.complexity.Subscription.MessageReceived(childComplexity), true
 
 	case "Thread.id":
 		if e.complexity.Thread.ID == nil {
@@ -670,9 +731,12 @@ var parsedSchema = gqlparser.MustLoadSchema(
 }
 
 type Service {
+	name: String!
     displayName: String!
     description: String!
-    name: String!
+    version: String!
+    type: String!
+    entryPoint: String!
 }
 
 enum InstanceStatus {
@@ -687,6 +751,12 @@ type ServiceInstance {
     id: ID!
     name: String!
     status: InstanceStatus!
+    service: Service!
+}
+
+type NewServiceInstanceCreated {
+    instance: ServiceInstance!
+    accessToken: String!
 }
 
 type ThreadGroup {
@@ -790,21 +860,25 @@ type ConfigurationResponse {
 	fieldValues: [String!]!
 }
 
+type SearchRequest {
+    query: String!
+}
+
 
 type Mutation {
-    sendMessage(instanceId: ID!, input: MessageInput!): Message!
+    sendMessage(input: MessageInput!): Message!
     createThreadGroup(name: String!): ThreadGroup!
     deleteThreadGroup(id: ID!): ID!
     deleteServiceInstance(id: ID!): ID!
     deleteThread(id: ID!): ID!
     addThreadToGroup(input: ThreadInput): ThreadGroup!
-    setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!
-    createNewInstance(serviceModuleName: String!, instanceName: String!): ServiceInstance!
+    setInstanceStatus(status: InstanceStatus): ServiceInstance!
+    createNewInstance(serviceModuleName: String!, instanceName: String!): NewServiceInstanceCreated!
 
 }
 
 type Subscription {
-    messageReceived(instanceId: ID!): MessagePayload!
+    messageReceived: MessagePayload!
     configurationReceived(configuration: ConfigurationRequest!): ConfigurationResponse!
 }
 
@@ -910,44 +984,28 @@ func (ec *executionContext) field_Mutation_deleteThread_args(ctx context.Context
 func (ec *executionContext) field_Mutation_sendMessage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["instanceId"]; ok {
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["instanceId"] = arg0
-	var arg1 MessageInput
+	var arg0 MessageInput
 	if tmp, ok := rawArgs["input"]; ok {
-		arg1, err = ec.unmarshalNMessageInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageInput(ctx, tmp)
+		arg0, err = ec.unmarshalNMessageInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐMessageInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg1
+	args["input"] = arg0
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_setInstanceStatus_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["instanceId"]; ok {
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["instanceId"] = arg0
-	var arg1 *InstanceStatus
+	var arg0 *InstanceStatus
 	if tmp, ok := rawArgs["status"]; ok {
-		arg1, err = ec.unmarshalOInstanceStatus2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐInstanceStatus(ctx, tmp)
+		arg0, err = ec.unmarshalOInstanceStatus2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐInstanceStatus(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["status"] = arg1
+	args["status"] = arg0
 	return args, nil
 }
 
@@ -976,20 +1034,6 @@ func (ec *executionContext) field_Subscription_configurationReceived_args(ctx co
 		}
 	}
 	args["configuration"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Subscription_messageReceived_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["instanceId"]; ok {
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["instanceId"] = arg0
 	return args, nil
 }
 
@@ -1721,7 +1765,7 @@ func (ec *executionContext) _Mutation_sendMessage(ctx context.Context, field gra
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SendMessage(rctx, args["instanceId"].(string), args["input"].(MessageInput))
+		return ec.resolvers.Mutation().SendMessage(rctx, args["input"].(MessageInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1985,7 +2029,7 @@ func (ec *executionContext) _Mutation_setInstanceStatus(ctx context.Context, fie
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetInstanceStatus(rctx, args["instanceId"].(string), args["status"].(*InstanceStatus))
+		return ec.resolvers.Mutation().SetInstanceStatus(rctx, args["status"].(*InstanceStatus))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2041,10 +2085,84 @@ func (ec *executionContext) _Mutation_createNewInstance(ctx context.Context, fie
 		}
 		return graphql.Null
 	}
+	res := resTmp.(*NewServiceInstanceCreated)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNNewServiceInstanceCreated2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐNewServiceInstanceCreated(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NewServiceInstanceCreated_instance(ctx context.Context, field graphql.CollectedField, obj *NewServiceInstanceCreated) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "NewServiceInstanceCreated",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Instance, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
 	res := resTmp.(*ServiceInstance)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNServiceInstance2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐServiceInstance(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _NewServiceInstanceCreated_accessToken(ctx context.Context, field graphql.CollectedField, obj *NewServiceInstanceCreated) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "NewServiceInstanceCreated",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AccessToken, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_messages(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2270,6 +2388,80 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _SearchRequest_query(ctx context.Context, field graphql.CollectedField, obj *SearchRequest) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "SearchRequest",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Query, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Service_name(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Service",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Service_displayName(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -2344,7 +2536,7 @@ func (ec *executionContext) _Service_description(ctx context.Context, field grap
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Service_name(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
+func (ec *executionContext) _Service_version(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -2363,7 +2555,81 @@ func (ec *executionContext) _Service_name(ctx context.Context, field graphql.Col
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
+		return obj.Version, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Service_type(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Service",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Service_entryPoint(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Service",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EntryPoint, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2492,21 +2758,52 @@ func (ec *executionContext) _ServiceInstance_status(ctx context.Context, field g
 	return ec.marshalNInstanceStatus2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐInstanceStatus(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _ServiceInstance_service(ctx context.Context, field graphql.CollectedField, obj *ServiceInstance) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ServiceInstance",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.ServiceInstance().Service(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*Service)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNService2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐService(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Subscription_messageReceived(ctx context.Context, field graphql.CollectedField) func() graphql.Marshaler {
 	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{
 		Field: field,
 		Args:  nil,
 	})
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Subscription_messageReceived_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return nil
-	}
 	// FIXME: subscriptions are missing request middleware stack https://github.com/99designs/gqlgen/issues/259
 	//          and Tracer stack
 	rctx := ctx
-	results, err := ec.resolvers.Subscription().MessageReceived(rctx, args["instanceId"].(string))
+	results, err := ec.resolvers.Subscription().MessageReceived(rctx)
 	if err != nil {
 		ec.Error(ctx, err)
 		return nil
@@ -4617,6 +4914,38 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
+var newServiceInstanceCreatedImplementors = []string{"NewServiceInstanceCreated"}
+
+func (ec *executionContext) _NewServiceInstanceCreated(ctx context.Context, sel ast.SelectionSet, obj *NewServiceInstanceCreated) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, newServiceInstanceCreatedImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("NewServiceInstanceCreated")
+		case "instance":
+			out.Values[i] = ec._NewServiceInstanceCreated_instance(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "accessToken":
+			out.Values[i] = ec._NewServiceInstanceCreated_accessToken(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var queryImplementors = []string{"Query"}
 
 func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -4703,6 +5032,33 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
+var searchRequestImplementors = []string{"SearchRequest"}
+
+func (ec *executionContext) _SearchRequest(ctx context.Context, sel ast.SelectionSet, obj *SearchRequest) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, searchRequestImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SearchRequest")
+		case "query":
+			out.Values[i] = ec._SearchRequest_query(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var serviceImplementors = []string{"Service"}
 
 func (ec *executionContext) _Service(ctx context.Context, sel ast.SelectionSet, obj *Service) graphql.Marshaler {
@@ -4714,6 +5070,11 @@ func (ec *executionContext) _Service(ctx context.Context, sel ast.SelectionSet, 
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Service")
+		case "name":
+			out.Values[i] = ec._Service_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "displayName":
 			out.Values[i] = ec._Service_displayName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4724,8 +5085,18 @@ func (ec *executionContext) _Service(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "name":
-			out.Values[i] = ec._Service_name(ctx, field, obj)
+		case "version":
+			out.Values[i] = ec._Service_version(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "type":
+			out.Values[i] = ec._Service_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "entryPoint":
+			out.Values[i] = ec._Service_entryPoint(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4754,18 +5125,32 @@ func (ec *executionContext) _ServiceInstance(ctx context.Context, sel ast.Select
 		case "id":
 			out.Values[i] = ec._ServiceInstance_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._ServiceInstance_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "status":
 			out.Values[i] = ec._ServiceInstance_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "service":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._ServiceInstance_service(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5449,6 +5834,20 @@ func (ec *executionContext) marshalNMessagePayload2ᚖgithubᚗcomᚋfeelfreelin
 		return graphql.Null
 	}
 	return ec._MessagePayload(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNNewServiceInstanceCreated2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐNewServiceInstanceCreated(ctx context.Context, sel ast.SelectionSet, v NewServiceInstanceCreated) graphql.Marshaler {
+	return ec._NewServiceInstanceCreated(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNNewServiceInstanceCreated2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐNewServiceInstanceCreated(ctx context.Context, sel ast.SelectionSet, v *NewServiceInstanceCreated) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._NewServiceInstanceCreated(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNService2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐService(ctx context.Context, sel ast.SelectionSet, v Service) graphql.Marshaler {

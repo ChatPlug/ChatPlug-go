@@ -2,6 +2,7 @@ package core
 
 import "context"
 
+// Message resolves additional info in message gql query
 func (r *Resolver) Message() MessageResolver {
 	return &messageResolver{r}
 }

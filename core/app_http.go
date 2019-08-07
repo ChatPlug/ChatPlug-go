@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -11,11 +13,61 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// A private key for context that only this package can access. This is important
+// to prevent collisions between different context uses
+var instanceCtxKey = &contextKey{"serviceInstance"}
+
+type contextKey struct {
+	name string
+}
+
+func (app *App) CreateServiceInstanceMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		accessToken := c.GetHeader("Authentication")
+		fmt.Println(accessToken)
+
+		// Allow unauthenticated users in
+		if accessToken == "" || c == nil {
+			c.Next()
+			return
+		}
+
+		var serviceInstance ServiceInstance
+
+		app.db.First(&serviceInstance, "access_token = ?", accessToken)
+
+		// put it in context
+		ctx := context.WithValue(c.Request.Context(), instanceCtxKey, &serviceInstance)
+
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}
+
+// ForContext finds the ServiceInstance from the context
+func (app *App) InstanceForContext(ctx context.Context) *ServiceInstance {
+	raw, ok := ctx.Value(instanceCtxKey).(*ServiceInstance)
+
+	if !ok {
+		payload := handler.GetInitPayload(ctx)
+		if payload == nil {
+			return nil
+		}
+
+		var serviceInstance ServiceInstance
+
+		app.db.First(&serviceInstance, "access_token = ?", payload["accessToken"])
+
+		return &serviceInstance
+	}
+
+	return raw
+}
 func (app *App) RunHTTPServer() {
 	// Setting up Gin
 	app.router = gin.New()
 	app.router.RedirectTrailingSlash = false
-	app.router.Use(cors.Default())
+	app.router.Use(cors.Default(), app.CreateServiceInstanceMiddleware())
 	app.router.Any("/query", app.graphqlQueryHandler())
 	app.router.GET("/playground", app.graphqlPlaygroundHandler())
 

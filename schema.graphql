@@ -9,9 +9,12 @@ type Thread {
 }
 
 type Service {
+	name: String!
     displayName: String!
     description: String!
-    name: String!
+    version: String!
+    type: String!
+    entryPoint: String!
 }
 
 enum InstanceStatus {
@@ -26,6 +29,12 @@ type ServiceInstance {
     id: ID!
     name: String!
     status: InstanceStatus!
+    service: Service!
+}
+
+type NewServiceInstanceCreated {
+    instance: ServiceInstance!
+    accessToken: String!
 }
 
 type ThreadGroup {
@@ -129,21 +138,25 @@ type ConfigurationResponse {
 	fieldValues: [String!]!
 }
 
+type SearchRequest {
+    query: String!
+}
+
 
 type Mutation {
-    sendMessage(instanceId: ID!, input: MessageInput!): Message!
+    sendMessage(input: MessageInput!): Message!
     createThreadGroup(name: String!): ThreadGroup!
     deleteThreadGroup(id: ID!): ID!
     deleteServiceInstance(id: ID!): ID!
     deleteThread(id: ID!): ID!
     addThreadToGroup(input: ThreadInput): ThreadGroup!
-    setInstanceStatus(instanceId: ID!, status: InstanceStatus): ServiceInstance!
-    createNewInstance(serviceModuleName: String!, instanceName: String!): ServiceInstance!
+    setInstanceStatus(status: InstanceStatus): ServiceInstance!
+    createNewInstance(serviceModuleName: String!, instanceName: String!): NewServiceInstanceCreated!
 
 }
 
 type Subscription {
-    messageReceived(instanceId: ID!): MessagePayload!
+    messageReceived: MessagePayload!
     configurationReceived(configuration: ConfigurationRequest!): ConfigurationResponse!
 }
 

@@ -33,13 +33,16 @@ func commandExists(cmd string) bool {
 }
 
 func (bsh *BaseServiceHandler) RunInstance(command *exec.Cmd, instanceID string) {
+	var serviceInstance ServiceInstance
+
+	bsh.App.db.First(&serviceInstance, "id = ?", instanceID)
 	command.Args = append(command.Args, instanceID)
 	command.Dir = path.Join("services", bsh.Service.Name)
 	command.Env = os.Environ()
 	command.Env = append(command.Env,
 		"WS_ENDPOINT=ws://localhost:2137/query",
 		"HTTP_ENDPOINT=http://localhost:2137/query",
-		"INSTANCE_ID="+instanceID)
+		"ACCESS_TOKEN="+serviceInstance.AccessToken)
 
 	bsh.ServiceProcesses[instanceID] = command
 

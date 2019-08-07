@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	"log"
+	"fmt"
 )
 
 func (r *Resolver) Subscription() SubscriptionResolver {
@@ -11,9 +11,13 @@ func (r *Resolver) Subscription() SubscriptionResolver {
 
 type subscriptionResolver struct{ *Resolver }
 
-func (r *subscriptionResolver) MessageReceived(ctx context.Context, instanceID string) (<-chan *MessagePayload, error) {
-	//fmt.Println(instanceID)
-	eventBroadcaster := r.App.sm.FindEventBoardcasterByInstanceID(instanceID)
+func (r *subscriptionResolver) MessageReceived(ctx context.Context) (<-chan *MessagePayload, error) {
+	instance := r.App.InstanceForContext(ctx)
+	if instance == nil {
+		return nil, fmt.Errorf("Access denied")
+	}
+
+	eventBroadcaster := r.App.sm.FindEventBoardcasterByInstanceID(instance.ID)
 
 	messages := make(chan *MessagePayload, 1)
 	go func() {
@@ -35,7 +39,6 @@ func (r *subscriptionResolver) MessageReceived(ctx context.Context, instanceID s
 }
 
 func (r *subscriptionResolver) ConfigurationReceived(ctx context.Context, configurationRequest ConfigurationRequest) (<-chan *ConfigurationResponse, error) {
-	log.Println("A O S")
 	configurationRequest.resChan = make(chan *ConfigurationResponse)
 	r.App.ch.configurationQueue <- &configurationRequest
 
