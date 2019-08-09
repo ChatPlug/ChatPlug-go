@@ -14,6 +14,48 @@ func (r *Resolver) Mutation() MutationResolver {
 
 type mutationResolver struct{ *Resolver }
 
+func (r *mutationResolver) SetSearchResponse(ctx context.Context, forQuery string, threads []*ThreadSearchResultInput) (*SearchResponse, error) {
+	instance := r.App.InstanceForContext(ctx)
+	if instance == nil {
+		return &SearchResponse{}, fmt.Errorf("Access denied")
+	}
+
+	loadedInstance := r.App.sm.FindLoadedInstance(instance.ID)
+
+	threadResults := make([]*ThreadSearchResult, 0)
+	for _, thread := range threads {
+		threadResults = append(threadResults, &ThreadSearchResult{
+			Name:     thread.Name,
+			OriginID: thread.OriginID,
+			IconURL:  thread.IconURL,
+		})
+	}
+
+	res := &SearchResponse{ForQuery: forQuery, Threads: threadResults}
+
+	loadedInstance.searchResponseEventBroadcaster.Broadcast(res)
+
+	return res, nil
+}
+
+func (r *mutationResolver) SearchThreadsInService(ctx context.Context, q string, instanceID string) (*SearchResponse, error) {
+	loadedInstance := r.App.sm.FindLoadedInstance(instanceID)
+
+	loadedInstance.searchRequestEventBroadcaster.Broadcast(&SearchRequest{Query: q})
+
+	var res *SearchResponse
+	msgChan, cancel := loadedInstance.searchResponseEventBroadcaster.Subscribe()
+	for msg := range msgChan {
+		if msg.(*SearchResponse).ForQuery == q {
+			cancel()
+			res = msg.(*SearchResponse)
+			break
+		}
+	}
+
+	return res, nil
+}
+
 func (r *mutationResolver) SendMessage(ctx context.Context, input MessageInput) (*Message, error) {
 	instance := r.App.InstanceForContext(ctx)
 	if instance == nil {
@@ -77,7 +119,7 @@ func (r *mutationResolver) SendMessage(ctx context.Context, input MessageInput) 
 					continue
 				}
 				if msg.ThreadID != thread.ID {
-					r.App.sm.FindEventBoardcasterByInstanceID(thread.ServiceInstanceID).Broadcast(&MessagePayload{
+					r.App.sm.FindLoadedInstance(thread.ServiceInstanceID).messageEventBroadcaster.Broadcast(&MessagePayload{
 						TargetThreadID: thread.OriginID,
 						Message:        msg,
 					})
@@ -121,11 +163,17 @@ func (r *mutationResolver) AddThreadToGroup(ctx context.Context, input *ThreadIn
 
 	r.App.db.First(&group, "id = ?", input.GroupID)
 
+	iconURL := "https://i.imgur.com/3yPh9fE.png"
+	if input.IconURL != nil {
+		iconURL = *input.IconURL
+	}
+
 	r.App.db.Model(&group).Association("Threads").Append(&Thread{
 		OriginID:          input.OriginID,
 		Name:              input.Name,
 		ServiceInstanceID: input.InstanceID,
 		Readonly:          input.Readonly,
+		IconURL:           iconURL,
 	})
 
 	return &group, nil

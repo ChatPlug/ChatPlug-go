@@ -5,7 +5,20 @@ type Thread {
     threadGroupId: ID!
     service: ServiceInstance!
     readonly: Boolean
+    iconUrl: String!
     id: ID!
+}
+
+type ThreadSearchResult {
+    name: String!
+    iconUrl: String
+    originId: String!
+}
+
+input ThreadSearchResultInput {
+    name: String!
+    originId: String!
+    iconUrl: String
 }
 
 type Service {
@@ -106,6 +119,7 @@ input ThreadInput {
     originId: String!
     groupId: ID!
     readonly: Boolean
+    iconUrl: String
     name: String!
 }
 
@@ -142,6 +156,11 @@ type SearchRequest {
     query: String!
 }
 
+type SearchResponse {
+    forQuery: String!
+    threads: [ThreadSearchResult!]!
+}
+
 
 type Mutation {
     sendMessage(input: MessageInput!): Message!
@@ -152,11 +171,13 @@ type Mutation {
     addThreadToGroup(input: ThreadInput): ThreadGroup!
     setInstanceStatus(status: InstanceStatus): ServiceInstance!
     createNewInstance(serviceModuleName: String!, instanceName: String!): NewServiceInstanceCreated!
-
+    setSearchResponse(forQuery: String!, threads: [ThreadSearchResultInput!]!): SearchResponse
+    searchThreadsInService(q: String!, instanceID: String!): SearchResponse
 }
 
 type Subscription {
     messageReceived: MessagePayload!
     configurationReceived(configuration: ConfigurationRequest!): ConfigurationResponse!
+    subscribeToSearchRequests: SearchRequest!
 }
 

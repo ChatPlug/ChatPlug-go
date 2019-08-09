@@ -67,6 +67,7 @@ type Thread struct {
 	OriginID          string    `json:"originId"`
 	Messages          []Message `json:"messages"`
 	ThreadGroupID     string    `json:"threadGroupId"`
+	IconURL           string    `json:"iconUrl" gorm:"default:'https://i.imgur.com/3yPh9fE.png'"`
 	ServiceInstanceID string    `json:"serviceInstanceId"`
 }
 

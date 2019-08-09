@@ -81,14 +81,16 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddThreadToGroup      func(childComplexity int, input *ThreadInput) int
-		CreateNewInstance     func(childComplexity int, serviceModuleName string, instanceName string) int
-		CreateThreadGroup     func(childComplexity int, name string) int
-		DeleteServiceInstance func(childComplexity int, id string) int
-		DeleteThread          func(childComplexity int, id string) int
-		DeleteThreadGroup     func(childComplexity int, id string) int
-		SendMessage           func(childComplexity int, input MessageInput) int
-		SetInstanceStatus     func(childComplexity int, status *InstanceStatus) int
+		AddThreadToGroup       func(childComplexity int, input *ThreadInput) int
+		CreateNewInstance      func(childComplexity int, serviceModuleName string, instanceName string) int
+		CreateThreadGroup      func(childComplexity int, name string) int
+		DeleteServiceInstance  func(childComplexity int, id string) int
+		DeleteThread           func(childComplexity int, id string) int
+		DeleteThreadGroup      func(childComplexity int, id string) int
+		SearchThreadsInService func(childComplexity int, q string, instanceID string) int
+		SendMessage            func(childComplexity int, input MessageInput) int
+		SetInstanceStatus      func(childComplexity int, status *InstanceStatus) int
+		SetSearchResponse      func(childComplexity int, forQuery string, threads []*ThreadSearchResultInput) int
 	}
 
 	NewServiceInstanceCreated struct {
@@ -105,6 +107,11 @@ type ComplexityRoot struct {
 
 	SearchRequest struct {
 		Query func(childComplexity int) int
+	}
+
+	SearchResponse struct {
+		ForQuery func(childComplexity int) int
+		Threads  func(childComplexity int) int
 	}
 
 	Service struct {
@@ -124,12 +131,14 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		ConfigurationReceived func(childComplexity int, configuration ConfigurationRequest) int
-		MessageReceived       func(childComplexity int) int
+		ConfigurationReceived     func(childComplexity int, configuration ConfigurationRequest) int
+		MessageReceived           func(childComplexity int) int
+		SubscribeToSearchRequests func(childComplexity int) int
 	}
 
 	Thread struct {
 		ID            func(childComplexity int) int
+		IconURL       func(childComplexity int) int
 		Messages      func(childComplexity int) int
 		Name          func(childComplexity int) int
 		OriginID      func(childComplexity int) int
@@ -143,6 +152,12 @@ type ComplexityRoot struct {
 		Messages func(childComplexity int) int
 		Name     func(childComplexity int) int
 		Threads  func(childComplexity int) int
+	}
+
+	ThreadSearchResult struct {
+		IconURL  func(childComplexity int) int
+		Name     func(childComplexity int) int
+		OriginID func(childComplexity int) int
 	}
 }
 
@@ -159,6 +174,8 @@ type MutationResolver interface {
 	AddThreadToGroup(ctx context.Context, input *ThreadInput) (*ThreadGroup, error)
 	SetInstanceStatus(ctx context.Context, status *InstanceStatus) (*ServiceInstance, error)
 	CreateNewInstance(ctx context.Context, serviceModuleName string, instanceName string) (*NewServiceInstanceCreated, error)
+	SetSearchResponse(ctx context.Context, forQuery string, threads []*ThreadSearchResultInput) (*SearchResponse, error)
+	SearchThreadsInService(ctx context.Context, q string, instanceID string) (*SearchResponse, error)
 }
 type QueryResolver interface {
 	Messages(ctx context.Context) ([]*Message, error)
@@ -172,6 +189,7 @@ type ServiceInstanceResolver interface {
 type SubscriptionResolver interface {
 	MessageReceived(ctx context.Context) (<-chan *MessagePayload, error)
 	ConfigurationReceived(ctx context.Context, configuration ConfigurationRequest) (<-chan *ConfigurationResponse, error)
+	SubscribeToSearchRequests(ctx context.Context) (<-chan *SearchRequest, error)
 }
 type ThreadResolver interface {
 	Service(ctx context.Context, obj *Thread) (*ServiceInstance, error)
@@ -390,6 +408,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.DeleteThreadGroup(childComplexity, args["id"].(string)), true
 
+	case "Mutation.searchThreadsInService":
+		if e.complexity.Mutation.SearchThreadsInService == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_searchThreadsInService_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SearchThreadsInService(childComplexity, args["q"].(string), args["instanceID"].(string)), true
+
 	case "Mutation.sendMessage":
 		if e.complexity.Mutation.SendMessage == nil {
 			break
@@ -413,6 +443,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SetInstanceStatus(childComplexity, args["status"].(*InstanceStatus)), true
+
+	case "Mutation.setSearchResponse":
+		if e.complexity.Mutation.SetSearchResponse == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setSearchResponse_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetSearchResponse(childComplexity, args["forQuery"].(string), args["threads"].([]*ThreadSearchResultInput)), true
 
 	case "NewServiceInstanceCreated.accessToken":
 		if e.complexity.NewServiceInstanceCreated.AccessToken == nil {
@@ -462,6 +504,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.SearchRequest.Query(childComplexity), true
+
+	case "SearchResponse.forQuery":
+		if e.complexity.SearchResponse.ForQuery == nil {
+			break
+		}
+
+		return e.complexity.SearchResponse.ForQuery(childComplexity), true
+
+	case "SearchResponse.threads":
+		if e.complexity.SearchResponse.Threads == nil {
+			break
+		}
+
+		return e.complexity.SearchResponse.Threads(childComplexity), true
 
 	case "Service.description":
 		if e.complexity.Service.Description == nil {
@@ -552,12 +608,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Subscription.MessageReceived(childComplexity), true
 
+	case "Subscription.subscribeToSearchRequests":
+		if e.complexity.Subscription.SubscribeToSearchRequests == nil {
+			break
+		}
+
+		return e.complexity.Subscription.SubscribeToSearchRequests(childComplexity), true
+
 	case "Thread.id":
 		if e.complexity.Thread.ID == nil {
 			break
 		}
 
 		return e.complexity.Thread.ID(childComplexity), true
+
+	case "Thread.iconUrl":
+		if e.complexity.Thread.IconURL == nil {
+			break
+		}
+
+		return e.complexity.Thread.IconURL(childComplexity), true
 
 	case "Thread.messages":
 		if e.complexity.Thread.Messages == nil {
@@ -628,6 +698,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ThreadGroup.Threads(childComplexity), true
+
+	case "ThreadSearchResult.iconUrl":
+		if e.complexity.ThreadSearchResult.IconURL == nil {
+			break
+		}
+
+		return e.complexity.ThreadSearchResult.IconURL(childComplexity), true
+
+	case "ThreadSearchResult.name":
+		if e.complexity.ThreadSearchResult.Name == nil {
+			break
+		}
+
+		return e.complexity.ThreadSearchResult.Name(childComplexity), true
+
+	case "ThreadSearchResult.originId":
+		if e.complexity.ThreadSearchResult.OriginID == nil {
+			break
+		}
+
+		return e.complexity.ThreadSearchResult.OriginID(childComplexity), true
 
 	}
 	return 0, false
@@ -727,7 +818,20 @@ var parsedSchema = gqlparser.MustLoadSchema(
     threadGroupId: ID!
     service: ServiceInstance!
     readonly: Boolean
+    iconUrl: String!
     id: ID!
+}
+
+type ThreadSearchResult {
+    name: String!
+    iconUrl: String!
+    originId: String!
+}
+
+input ThreadSearchResultInput {
+    name: String!
+    originId: String!
+    iconUrl: String!
 }
 
 type Service {
@@ -828,6 +932,7 @@ input ThreadInput {
     originId: String!
     groupId: ID!
     readonly: Boolean
+    iconUrl: String
     name: String!
 }
 
@@ -864,6 +969,11 @@ type SearchRequest {
     query: String!
 }
 
+type SearchResponse {
+    forQuery: String!
+    threads: [ThreadSearchResult!]!
+}
+
 
 type Mutation {
     sendMessage(input: MessageInput!): Message!
@@ -874,12 +984,14 @@ type Mutation {
     addThreadToGroup(input: ThreadInput): ThreadGroup!
     setInstanceStatus(status: InstanceStatus): ServiceInstance!
     createNewInstance(serviceModuleName: String!, instanceName: String!): NewServiceInstanceCreated!
-
+    setSearchResponse(forQuery: String!, threads: [ThreadSearchResultInput!]!): SearchResponse
+    searchThreadsInService(q: String!, instanceID: String!): SearchResponse
 }
 
 type Subscription {
     messageReceived: MessagePayload!
     configurationReceived(configuration: ConfigurationRequest!): ConfigurationResponse!
+    subscribeToSearchRequests: SearchRequest!
 }
 
 `},
@@ -981,6 +1093,28 @@ func (ec *executionContext) field_Mutation_deleteThread_args(ctx context.Context
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_searchThreadsInService_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["q"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["q"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["instanceID"]; ok {
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["instanceID"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_sendMessage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1006,6 +1140,28 @@ func (ec *executionContext) field_Mutation_setInstanceStatus_args(ctx context.Co
 		}
 	}
 	args["status"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setSearchResponse_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["forQuery"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["forQuery"] = arg0
+	var arg1 []*ThreadSearchResultInput
+	if tmp, ok := rawArgs["threads"]; ok {
+		arg1, err = ec.unmarshalNThreadSearchResultInput2ᚕᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResultInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["threads"] = arg1
 	return args, nil
 }
 
@@ -2091,6 +2247,88 @@ func (ec *executionContext) _Mutation_createNewInstance(ctx context.Context, fie
 	return ec.marshalNNewServiceInstanceCreated2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐNewServiceInstanceCreated(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_setSearchResponse(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_setSearchResponse_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetSearchResponse(rctx, args["forQuery"].(string), args["threads"].([]*ThreadSearchResultInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*SearchResponse)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOSearchResponse2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐSearchResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_searchThreadsInService(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_searchThreadsInService_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SearchThreadsInService(rctx, args["q"].(string), args["instanceID"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*SearchResponse)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOSearchResponse2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐSearchResponse(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _NewServiceInstanceCreated_instance(ctx context.Context, field graphql.CollectedField, obj *NewServiceInstanceCreated) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -2423,6 +2661,80 @@ func (ec *executionContext) _SearchRequest_query(ctx context.Context, field grap
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SearchResponse_forQuery(ctx context.Context, field graphql.CollectedField, obj *SearchResponse) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "SearchResponse",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ForQuery, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SearchResponse_threads(ctx context.Context, field graphql.CollectedField, obj *SearchResponse) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "SearchResponse",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Threads, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*ThreadSearchResult)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNThreadSearchResult2ᚕᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Service_name(ctx context.Context, field graphql.CollectedField, obj *Service) (ret graphql.Marshaler) {
@@ -2857,6 +3169,34 @@ func (ec *executionContext) _Subscription_configurationReceived(ctx context.Cont
 	}
 }
 
+func (ec *executionContext) _Subscription_subscribeToSearchRequests(ctx context.Context, field graphql.CollectedField) func() graphql.Marshaler {
+	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{
+		Field: field,
+		Args:  nil,
+	})
+	// FIXME: subscriptions are missing request middleware stack https://github.com/99designs/gqlgen/issues/259
+	//          and Tracer stack
+	rctx := ctx
+	results, err := ec.resolvers.Subscription().SubscribeToSearchRequests(rctx)
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	return func() graphql.Marshaler {
+		res, ok := <-results
+		if !ok {
+			return nil
+		}
+		return graphql.WriterFunc(func(w io.Writer) {
+			w.Write([]byte{'{'})
+			graphql.MarshalString(field.Alias).MarshalGQL(w)
+			w.Write([]byte{':'})
+			ec.marshalNSearchRequest2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐSearchRequest(ctx, field.Selections, res).MarshalGQL(w)
+			w.Write([]byte{'}'})
+		})
+	}
+}
+
 func (ec *executionContext) _Thread_name(ctx context.Context, field graphql.CollectedField, obj *Thread) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -3076,6 +3416,43 @@ func (ec *executionContext) _Thread_readonly(ctx context.Context, field graphql.
 	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Thread_iconUrl(ctx context.Context, field graphql.CollectedField, obj *Thread) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Thread",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IconURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Thread_id(ctx context.Context, field graphql.CollectedField, obj *Thread) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -3259,6 +3636,117 @@ func (ec *executionContext) _ThreadGroup_threads(ctx context.Context, field grap
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNThread2ᚕgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThread(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ThreadSearchResult_name(ctx context.Context, field graphql.CollectedField, obj *ThreadSearchResult) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ThreadSearchResult",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ThreadSearchResult_iconUrl(ctx context.Context, field graphql.CollectedField, obj *ThreadSearchResult) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ThreadSearchResult",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IconURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ThreadSearchResult_originId(ctx context.Context, field graphql.CollectedField, obj *ThreadSearchResult) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ThreadSearchResult",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OriginID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -4610,9 +5098,45 @@ func (ec *executionContext) unmarshalInputThreadInput(ctx context.Context, obj i
 			if err != nil {
 				return it, err
 			}
+		case "iconUrl":
+			var err error
+			it.IconURL, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "name":
 			var err error
 			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputThreadSearchResultInput(ctx context.Context, obj interface{}) (ThreadSearchResultInput, error) {
+	var it ThreadSearchResultInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "name":
+			var err error
+			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "originId":
+			var err error
+			it.OriginID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "iconUrl":
+			var err error
+			it.IconURL, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -4903,6 +5427,10 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "setSearchResponse":
+			out.Values[i] = ec._Mutation_setSearchResponse(ctx, field)
+		case "searchThreadsInService":
+			out.Values[i] = ec._Mutation_searchThreadsInService(ctx, field)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5059,6 +5587,38 @@ func (ec *executionContext) _SearchRequest(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var searchResponseImplementors = []string{"SearchResponse"}
+
+func (ec *executionContext) _SearchResponse(ctx context.Context, sel ast.SelectionSet, obj *SearchResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, searchResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SearchResponse")
+		case "forQuery":
+			out.Values[i] = ec._SearchResponse_forQuery(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "threads":
+			out.Values[i] = ec._SearchResponse_threads(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var serviceImplementors = []string{"Service"}
 
 func (ec *executionContext) _Service(ctx context.Context, sel ast.SelectionSet, obj *Service) graphql.Marshaler {
@@ -5179,6 +5739,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 		return ec._Subscription_messageReceived(ctx, fields[0])
 	case "configurationReceived":
 		return ec._Subscription_configurationReceived(ctx, fields[0])
+	case "subscribeToSearchRequests":
+		return ec._Subscription_subscribeToSearchRequests(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -5231,6 +5793,11 @@ func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, o
 			})
 		case "readonly":
 			out.Values[i] = ec._Thread_readonly(ctx, field, obj)
+		case "iconUrl":
+			out.Values[i] = ec._Thread_iconUrl(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "id":
 			out.Values[i] = ec._Thread_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -5275,6 +5842,43 @@ func (ec *executionContext) _ThreadGroup(ctx context.Context, sel ast.SelectionS
 			}
 		case "threads":
 			out.Values[i] = ec._ThreadGroup_threads(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var threadSearchResultImplementors = []string{"ThreadSearchResult"}
+
+func (ec *executionContext) _ThreadSearchResult(ctx context.Context, sel ast.SelectionSet, obj *ThreadSearchResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, threadSearchResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ThreadSearchResult")
+		case "name":
+			out.Values[i] = ec._ThreadSearchResult_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "iconUrl":
+			out.Values[i] = ec._ThreadSearchResult_iconUrl(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "originId":
+			out.Values[i] = ec._ThreadSearchResult_originId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -5850,6 +6454,20 @@ func (ec *executionContext) marshalNNewServiceInstanceCreated2ᚖgithubᚗcomᚋ
 	return ec._NewServiceInstanceCreated(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNSearchRequest2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐSearchRequest(ctx context.Context, sel ast.SelectionSet, v SearchRequest) graphql.Marshaler {
+	return ec._SearchRequest(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSearchRequest2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐSearchRequest(ctx context.Context, sel ast.SelectionSet, v *SearchRequest) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._SearchRequest(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNService2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐService(ctx context.Context, sel ast.SelectionSet, v Service) graphql.Marshaler {
 	return ec._Service(ctx, sel, &v)
 }
@@ -6095,6 +6713,89 @@ func (ec *executionContext) marshalNThreadGroup2ᚖgithubᚗcomᚋfeelfreelinux�
 		return graphql.Null
 	}
 	return ec._ThreadGroup(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNThreadSearchResult2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResult(ctx context.Context, sel ast.SelectionSet, v ThreadSearchResult) graphql.Marshaler {
+	return ec._ThreadSearchResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNThreadSearchResult2ᚕᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResult(ctx context.Context, sel ast.SelectionSet, v []*ThreadSearchResult) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		rctx := &graphql.ResolverContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithResolverContext(ctx, rctx)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNThreadSearchResult2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResult(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalNThreadSearchResult2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResult(ctx context.Context, sel ast.SelectionSet, v *ThreadSearchResult) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._ThreadSearchResult(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNThreadSearchResultInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResultInput(ctx context.Context, v interface{}) (ThreadSearchResultInput, error) {
+	return ec.unmarshalInputThreadSearchResultInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalNThreadSearchResultInput2ᚕᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResultInput(ctx context.Context, v interface{}) ([]*ThreadSearchResultInput, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]*ThreadSearchResultInput, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNThreadSearchResultInput2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResultInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNThreadSearchResultInput2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResultInput(ctx context.Context, v interface{}) (*ThreadSearchResultInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalNThreadSearchResultInput2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐThreadSearchResultInput(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -6368,6 +7069,17 @@ func (ec *executionContext) marshalOInstanceStatus2ᚖgithubᚗcomᚋfeelfreelin
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) marshalOSearchResponse2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐSearchResponse(ctx context.Context, sel ast.SelectionSet, v SearchResponse) graphql.Marshaler {
+	return ec._SearchResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalOSearchResponse2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐSearchResponse(ctx context.Context, sel ast.SelectionSet, v *SearchResponse) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._SearchResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

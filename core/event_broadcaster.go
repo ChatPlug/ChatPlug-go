@@ -6,19 +6,19 @@ import (
 
 //EventBroadcaster is used to broadcast data to many listeners on separate goroutines. Used to exchange messages in thread groups
 type EventBroadcaster struct {
-	subscribers      []chan *MessagePayload
+	subscribers      []chan interface{}
 	subscribersMutex *sync.RWMutex
 }
 
 func NewEventBroadcaster() *EventBroadcaster {
 	return &EventBroadcaster{
-		subscribers:      []chan *MessagePayload{},
+		subscribers:      []chan interface{}{},
 		subscribersMutex: &sync.RWMutex{},
 	}
 }
 
-func (eb *EventBroadcaster) Subscribe() (eventChannel chan *MessagePayload, cancel func()) {
-	eventChannel = make(chan *MessagePayload)
+func (eb *EventBroadcaster) Subscribe() (eventChannel chan interface{}, cancel func()) {
+	eventChannel = make(chan interface{})
 
 	eb.subscribersMutex.Lock()
 	defer eb.subscribersMutex.Unlock()
@@ -44,7 +44,7 @@ func (eb *EventBroadcaster) Subscribe() (eventChannel chan *MessagePayload, canc
 	return
 }
 
-func (eb *EventBroadcaster) Broadcast(ev *MessagePayload) {
+func (eb *EventBroadcaster) Broadcast(ev interface{}) {
 	eb.subscribersMutex.RLock()
 	defer eb.subscribersMutex.RUnlock()
 	for _, sub := range eb.subscribers {

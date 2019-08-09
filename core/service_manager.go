@@ -9,7 +9,9 @@ import (
 
 type LoadedInstance struct {
 	instanceID       string
-	eventBroadcaster *EventBroadcaster
+	messageEventBroadcaster *EventBroadcaster
+	searchRequestEventBroadcaster *EventBroadcaster
+	searchResponseEventBroadcaster *EventBroadcaster
 }
 
 type ServiceManager struct {
@@ -61,7 +63,9 @@ func (sm *ServiceManager) LoadInstance(instanceID string) *LoadedInstance {
 	if !sm.IsInstanceLoaded(instanceID) {
 		instance := &LoadedInstance{
 			instanceID:       instanceID,
-			eventBroadcaster: NewEventBroadcaster(),
+			messageEventBroadcaster: NewEventBroadcaster(),
+			searchRequestEventBroadcaster: NewEventBroadcaster(),
+			searchResponseEventBroadcaster: NewEventBroadcaster(),
 		}
 
 		sm.instances = append(sm.instances, instance)
@@ -71,10 +75,10 @@ func (sm *ServiceManager) LoadInstance(instanceID string) *LoadedInstance {
 	return nil
 }
 
-func (sm *ServiceManager) FindEventBoardcasterByInstanceID(instanceID string) *EventBroadcaster {
+func (sm *ServiceManager) FindLoadedInstance(instanceID string) *LoadedInstance {
 	for _, n := range sm.instances {
 		if n.instanceID == instanceID {
-			return n.eventBroadcaster
+			return n
 		}
 	}
 	return nil

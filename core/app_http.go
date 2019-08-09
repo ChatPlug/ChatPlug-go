@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -27,7 +28,7 @@ func (app *App) CreateServiceInstanceMiddleware() gin.HandlerFunc {
 		fmt.Println(accessToken)
 
 		// Allow unauthenticated users in
-		if accessToken == "" || c == nil {
+		if accessToken == "" || c.Request.Context() == nil {
 			c.Next()
 			return
 		}
@@ -53,10 +54,18 @@ func (app *App) InstanceForContext(ctx context.Context) *ServiceInstance {
 		if payload == nil {
 			return nil
 		}
+		b, err := json.Marshal(payload)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(b))
+		accessToken := payload.GetString("accessToken")
 
 		var serviceInstance ServiceInstance
+		fmt.Printf("dooppappapapapapapapapapapapapapapapapapapapapapapaapaapapapapapapapapa")
+		fmt.Printf(accessToken)
 
-		app.db.First(&serviceInstance, "access_token = ?", payload["accessToken"])
+		app.db.First(&serviceInstance, "access_token = ?", accessToken)
 
 		return &serviceInstance
 	}

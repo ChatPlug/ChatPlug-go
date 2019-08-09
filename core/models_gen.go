@@ -43,12 +43,30 @@ type SearchRequest struct {
 	Query string `json:"query"`
 }
 
+type SearchResponse struct {
+	ForQuery string                `json:"forQuery"`
+	Threads  []*ThreadSearchResult `json:"threads"`
+}
+
 type ThreadInput struct {
-	InstanceID string `json:"instanceId"`
-	OriginID   string `json:"originId"`
-	GroupID    string `json:"groupId"`
-	Readonly   *bool  `json:"readonly"`
-	Name       string `json:"name"`
+	InstanceID string  `json:"instanceId"`
+	OriginID   string  `json:"originId"`
+	GroupID    string  `json:"groupId"`
+	Readonly   *bool   `json:"readonly"`
+	IconURL    *string `json:"iconUrl"`
+	Name       string  `json:"name"`
+}
+
+type ThreadSearchResult struct {
+	Name     string `json:"name"`
+	IconURL  string `json:"iconUrl"`
+	OriginID string `json:"originId"`
+}
+
+type ThreadSearchResultInput struct {
+	Name     string `json:"name"`
+	OriginID string `json:"originId"`
+	IconURL  string `json:"iconUrl"`
 }
 
 type AttachmentType string

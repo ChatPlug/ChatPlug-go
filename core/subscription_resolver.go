@@ -11,13 +11,40 @@ func (r *Resolver) Subscription() SubscriptionResolver {
 
 type subscriptionResolver struct{ *Resolver }
 
+func (r *subscriptionResolver) SubscribeToSearchRequests(ctx context.Context) (<-chan *SearchRequest, error) {
+	instance := r.App.InstanceForContext(ctx)
+	if instance == nil {
+		return nil, fmt.Errorf("Access denied")
+	}
+
+	eventBroadcaster := r.App.sm.FindLoadedInstance(instance.ID).searchRequestEventBroadcaster
+
+	requests := make(chan *SearchRequest, 1)
+	go func() {
+		msgChan, cancel := eventBroadcaster.Subscribe()
+	Loop:
+		for {
+			select {
+			case msg := <-msgChan:
+				if msg != nil {
+					requests <- msg.(*SearchRequest)
+				}
+			case <-ctx.Done():
+				cancel()
+				break Loop
+			}
+		}
+	}()
+	return requests, nil
+}
+
 func (r *subscriptionResolver) MessageReceived(ctx context.Context) (<-chan *MessagePayload, error) {
 	instance := r.App.InstanceForContext(ctx)
 	if instance == nil {
 		return nil, fmt.Errorf("Access denied")
 	}
 
-	eventBroadcaster := r.App.sm.FindEventBoardcasterByInstanceID(instance.ID)
+	eventBroadcaster := r.App.sm.FindLoadedInstance(instance.ID).messageEventBroadcaster
 
 	messages := make(chan *MessagePayload, 1)
 	go func() {
@@ -27,7 +54,7 @@ func (r *subscriptionResolver) MessageReceived(ctx context.Context) (<-chan *Mes
 			select {
 			case msg := <-msgChan:
 				if msg != nil {
-					messages <- msg
+					messages <- msg.(*MessagePayload)
 				}
 			case <-ctx.Done():
 				cancel()
