@@ -73,6 +73,7 @@ type Thread struct {
 
 // ConfigurationField holds data about one field in config
 type ConfigurationField struct {
+	Name         string                 `json:"name"`
 	Type         ConfigurationFieldType `json:"type"`
 	DefaultValue string                 `json:"defaultValue"`
 	Optional     bool                   `json:"optional"`
@@ -87,9 +88,15 @@ type ConfigurationRequest struct {
 	resChan chan *ConfigurationResponse
 }
 
+// ConfigurationResult holds data about one field value from the config
+type ConfigurationResult struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 // ConfigurationResponse holds a completed config info
 type ConfigurationResponse struct {
-	FieldValues []string `json:"fieldValues"`
+	FieldValues []ConfigurationResult `json:"fieldValues"`
 }
 
 // Service holds info about a single service. Can be initialized with many instances via ServiceInstance

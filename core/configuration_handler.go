@@ -30,7 +30,7 @@ func (ch *ConfigurationHandler) WatchForConfiguration() {
 
 func (ch *ConfigurationHandler) PromptForConfiguration(request *ConfigurationRequest) (*ConfigurationResponse, error) {
 	response := &ConfigurationResponse{
-		FieldValues: make([]string, 0),
+		FieldValues: make([]ConfigurationResult, 0),
 	}
 
 	for _, field := range request.Fields {
@@ -72,7 +72,7 @@ func (ch *ConfigurationHandler) PromptForConfiguration(request *ConfigurationReq
 		if err != nil {
 			return nil, errors.New("Configuration failed")
 		}
-		response.FieldValues = append(response.FieldValues, result)
+		response.FieldValues = append(response.FieldValues, ConfigurationResult{Name: field.Name, Value: result})
 	}
 
 	return response, nil

@@ -137,6 +137,7 @@ enum ConfigurationFieldType {
 }
 
 input ConfigurationField {
+    name: String!
 	type: ConfigurationFieldType!
     defaultValue: String!
     optional: Boolean!
@@ -148,8 +149,13 @@ input ConfigurationRequest {
 	fields: [ConfigurationField!]!
 }
 
+type ConfigurationResult {
+    name: String!
+    value: String!
+}
+
 type ConfigurationResponse {
-	fieldValues: [String!]!
+	fieldValues: [ConfigurationResult!]!
 }
 
 type SearchRequest {
