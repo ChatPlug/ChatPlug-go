@@ -42,6 +42,7 @@ func (bsh *BaseServiceHandler) RunInstance(command *exec.Cmd, instanceID string)
 	command.Env = append(command.Env,
 		"WS_ENDPOINT=ws://localhost:2137/query",
 		"HTTP_ENDPOINT=http://localhost:2137/query",
+		"INSTANCE_ID="+instanceID,
 		"ACCESS_TOKEN="+serviceInstance.AccessToken)
 
 	bsh.ServiceProcesses[instanceID] = command
