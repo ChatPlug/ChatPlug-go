@@ -58,15 +58,15 @@ type ThreadInput struct {
 }
 
 type ThreadSearchResult struct {
-	Name     string `json:"name"`
-	IconURL  string `json:"iconUrl"`
-	OriginID string `json:"originId"`
+	Name     string  `json:"name"`
+	IconURL  *string `json:"iconUrl"`
+	OriginID string  `json:"originId"`
 }
 
 type ThreadSearchResultInput struct {
-	Name     string `json:"name"`
-	OriginID string `json:"originId"`
-	IconURL  string `json:"iconUrl"`
+	Name     string  `json:"name"`
+	OriginID string  `json:"originId"`
+	IconURL  *string `json:"iconUrl"`
 }
 
 type AttachmentType string

@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -54,16 +53,15 @@ func (app *App) InstanceForContext(ctx context.Context) *ServiceInstance {
 		if payload == nil {
 			return nil
 		}
-		b, err := json.Marshal(payload)
+		/*_, err := json.Marshal(payload)
 		if err != nil {
 			log.Fatal(err)
-		}
-		fmt.Println(string(b))
+		}*/
+
 		accessToken := payload.GetString("accessToken")
+		fmt.Println(accessToken)
 
 		var serviceInstance ServiceInstance
-		fmt.Printf("dooppappapapapapapapapapapapapapapapapapapapapapapaapaapapapapapapapapa")
-		fmt.Printf(accessToken)
 
 		app.db.First(&serviceInstance, "access_token = ?", accessToken)
 

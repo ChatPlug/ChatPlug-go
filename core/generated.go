@@ -35,7 +35,6 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	ConfigurationResponse() ConfigurationResponseResolver
 	Message() MessageResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
@@ -167,9 +166,6 @@ type ComplexityRoot struct {
 	}
 }
 
-type ConfigurationResponseResolver interface {
-	FieldValues(ctx context.Context, obj *ConfigurationResponse) ([]*ConfigurationResult, error)
-}
 type MessageResolver interface {
 	Author(ctx context.Context, obj *Message) (*MessageAuthor, error)
 	Thread(ctx context.Context, obj *Message) (*Thread, error)
@@ -1419,13 +1415,13 @@ func (ec *executionContext) _ConfigurationResponse_fieldValues(ctx context.Conte
 		Object:   "ConfigurationResponse",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.ConfigurationResponse().FieldValues(rctx, obj)
+		return obj.FieldValues, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1437,10 +1433,10 @@ func (ec *executionContext) _ConfigurationResponse_fieldValues(ctx context.Conte
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*ConfigurationResult)
+	res := resTmp.([]ConfigurationResult)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNConfigurationResult2ᚕᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResult(ctx, field.Selections, res)
+	return ec.marshalNConfigurationResult2ᚕgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ConfigurationResult_name(ctx context.Context, field graphql.CollectedField, obj *ConfigurationResult) (ret graphql.Marshaler) {
@@ -5314,19 +5310,10 @@ func (ec *executionContext) _ConfigurationResponse(ctx context.Context, sel ast.
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("ConfigurationResponse")
 		case "fieldValues":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ConfigurationResponse_fieldValues(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
+			out.Values[i] = ec._ConfigurationResponse_fieldValues(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6433,7 +6420,7 @@ func (ec *executionContext) marshalNConfigurationResult2githubᚗcomᚋfeelfreel
 	return ec._ConfigurationResult(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNConfigurationResult2ᚕᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResult(ctx context.Context, sel ast.SelectionSet, v []*ConfigurationResult) graphql.Marshaler {
+func (ec *executionContext) marshalNConfigurationResult2ᚕgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResult(ctx context.Context, sel ast.SelectionSet, v []ConfigurationResult) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -6457,7 +6444,7 @@ func (ec *executionContext) marshalNConfigurationResult2ᚕᚖgithubᚗcomᚋfee
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNConfigurationResult2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResult(ctx, sel, v[i])
+			ret[i] = ec.marshalNConfigurationResult2githubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResult(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -6468,16 +6455,6 @@ func (ec *executionContext) marshalNConfigurationResult2ᚕᚖgithubᚗcomᚋfee
 	}
 	wg.Wait()
 	return ret
-}
-
-func (ec *executionContext) marshalNConfigurationResult2ᚖgithubᚗcomᚋfeelfreelinuxᚋChatPlugᚋcoreᚐConfigurationResult(ctx context.Context, sel ast.SelectionSet, v *ConfigurationResult) graphql.Marshaler {
-	if v == nil {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._ConfigurationResult(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {

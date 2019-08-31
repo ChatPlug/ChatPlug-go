@@ -9,8 +9,5 @@ func (r *Resolver) ServiceInstance() ServiceInstanceResolver {
 type serviceInstanceResolver struct{ *Resolver }
 
 func (r *serviceInstanceResolver) Service(ctx context.Context, obj *ServiceInstance) (*Service, error) {
-	var service Service
-
-	r.App.db.First(&service, "name = ?", obj.ModuleName)
-	return &service, nil
+	return r.App.sm.FindServiceWithName(obj.ModuleName), nil
 }
